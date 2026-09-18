@@ -483,6 +483,9 @@
     border-color: var(--gold-light);
     background: rgba(245, 197, 99, 0.06);
   }
+  .lp-field.has-error input { border-color: #FF6B6B; background: rgba(255, 107, 107, 0.06); }
+  .lp-field-error { font-size: 12.5px; color: #FF8A8A; min-height: 0; }
+  .lp-field-error:empty { display: none; }
   .lp-cta-submit { width: 100%; margin-top: 4px; }
   .lp-cta:disabled,
   .lp-cta[disabled] {
@@ -849,7 +852,7 @@
        BLOQUE 1 — HEADLINE (banner + hero + CTA)
        ====================================================================== -->
 
-  <div class="lp-banner"><span class="lp-banner-dot" aria-hidden="true"></span>Masterclass gratuita · <strong>Lunes 29 de septiembre · 19:00 hs (Argentina)</strong></div>
+  <div class="lp-banner"><span class="lp-banner-dot" aria-hidden="true"></span>Masterclass gratuita · <strong>Martes 29 de Septiembre · 19:00 hs (Argentina)</strong></div>
 
   <section class="lp-hero">
     <div class="lp-container">
@@ -866,7 +869,7 @@
             <span class="lp-date-card-divider"></span>
             <span class="big">19 hs</span>
           </div>
-          <span class="lp-date-card-sub">Lunes · Hora Argentina · En vivo</span>
+          <span class="lp-date-card-sub">Martes · Hora Argentina · En vivo</span>
         </div>
       </div>
     </div>
@@ -894,7 +897,7 @@
 
       <div class="lp-cta-wrap">
         <a href="#registro" class="lp-cta">Quiero mi lugar gratis</a>
-        <span class="lp-cta-meta"><strong>Lunes 29 de septiembre · 19:00 hs (Argentina)</strong></span>
+        <span class="lp-cta-meta"><strong>Martes 29 de Septiembre · 19:00 hs (Argentina)</strong></span>
       </div>
     </div>
   </section>
@@ -959,7 +962,7 @@
 
       <div class="lp-cta-wrap">
         <a href="#registro" class="lp-cta">Quiero mi lugar gratis</a>
-        <span class="lp-cta-meta"><strong>Lunes 29 de septiembre · 19:00 hs (Argentina)</strong></span>
+        <span class="lp-cta-meta"><strong>Martes 29 de Septiembre · 19:00 hs (Argentina)</strong></span>
       </div>
     </div>
   </section>
@@ -1199,20 +1202,23 @@
   <section class="lp-optin is-close" id="registro">
     <div class="lp-container-narrow">
       <h2>Tu lugar te está esperando</h2>
-      <p class="lp-optin-sub">Lunes 29 de septiembre, 19:00 hs (Argentina). Gratis, en vivo, y con todo lo que necesitás para dar el siguiente paso.</p>
+      <p class="lp-optin-sub">Martes 29 de Septiembre, 19:00 hs (Argentina). Gratis, en vivo, y con todo lo que necesitás para dar el siguiente paso.</p>
 
       <form class="lp-form-real" id="registroForm" novalidate>
         <div class="lp-field">
           <label for="reg-nombre">Nombre</label>
           <input type="text" id="reg-nombre" name="nombre" placeholder="Tu nombre" autocomplete="name" required>
+          <span class="lp-field-error" aria-live="polite"></span>
         </div>
         <div class="lp-field">
           <label for="reg-email">Email</label>
           <input type="email" id="reg-email" name="email" placeholder="tu@email.com" autocomplete="email" required>
+          <span class="lp-field-error" aria-live="polite"></span>
         </div>
         <div class="lp-field">
           <label for="reg-telefono">WhatsApp / Teléfono</label>
           <input type="tel" id="reg-telefono" name="telefono" placeholder="+54 9 11 1234 5678" autocomplete="tel" required>
+          <span class="lp-field-error" aria-live="polite"></span>
         </div>
         <button type="submit" class="lp-cta lp-cta-submit" id="registroSubmitBtn">Quiero mi lugar gratis</button>
       </form>
@@ -1317,7 +1323,7 @@
   /* ==========================================================================
      JS — Envío del formulario de registro (Bloque 11)
      Envía a /api/register (función serverless de Vercel — ver api/register.js),
-     que reenvía el body al webhook real de GHL (process.env.GHL_WEBHOOK_URL).
+     que crea el contacto en GHL vía API (contacts/upsert).
      Usa keepalive:true y no espera la respuesta antes de redirigir, para que
      el request no se corte cuando el navegador ya está navegando a gracias.html.
      ========================================================================== */
@@ -1332,6 +1338,25 @@
       var nombre = form.nombre.value.trim();
       var email = form.email.value.trim();
       var telefono = form.telefono.value.trim();
+
+      // Validación: no se envía nada hasta que los 3 campos sean válidos
+      var errors = {
+        nombre: nombre.length < 2 ? 'Ingresá tu nombre' : '',
+        email: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? '' : 'Ingresá un email válido',
+        telefono: telefono.replace(/\D/g, '').length < 8 ? 'Ingresá un teléfono válido (con código de área)' : ''
+      };
+      var firstInvalid = null;
+      ['nombre', 'email', 'telefono'].forEach(function (name) {
+        var input = form[name];
+        var field = input.closest('.lp-field');
+        field.classList.toggle('has-error', !!errors[name]);
+        field.querySelector('.lp-field-error').textContent = errors[name];
+        if (errors[name] && !firstInvalid) firstInvalid = input;
+      });
+      if (firstInvalid) {
+        firstInvalid.focus();
+        return;
+      }
 
       // Cualquier parámetro de tracking presente en la URL (utm_*, gclid, fbclid, etc.)
       var payload = { nombre: nombre, email: email, telefono: telefono };
