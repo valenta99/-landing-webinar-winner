@@ -256,7 +256,17 @@
   function showGate(wrong) {
     $("app").hidden = true;
     $("gate").hidden = false;
+    $("gate-err").textContent = "Clave incorrecta.";
     $("gate-err").hidden = !wrong;
+  }
+  // Errores que no son de clave: si el panel todavía está oculto, mostrarlos en el login.
+  function showError(msg, el) {
+    if ($("app").hidden) { $("gate").hidden = false; $("gate-err").textContent = msg; $("gate-err").hidden = false; }
+    else el.textContent = " · " + msg;
+  }
+  async function readJson(r) {
+    try { return await r.json(); }
+    catch (e) { return { error: "El servidor respondió " + r.status + " (no es JSON). ¿Están deployadas las funciones /api?" }; }
   }
   function showApp() { $("gate").hidden = true; $("app").hidden = false; }
 
@@ -285,8 +295,8 @@
   async function loadMetrics() {
     var r = await api("/api/stats?range=" + currentRange);
     if (r.status === 401) { try { localStorage.removeItem(STORE_KEY); } catch (e) {} showGate(KEY !== ""); return; }
-    var d = await r.json();
-    if (d.error) { $("upd").textContent = " · " + d.error; return; }
+    var d = await readJson(r);
+    if (d.error) { showError(d.error, $("upd")); return; }
     showApp();
 
     var rt = RANGE_TXT[d.range] || "hoy";
@@ -342,8 +352,8 @@
   async function loadContacts() {
     var r = await api("/api/leads");
     if (r.status === 401) { try { localStorage.removeItem(STORE_KEY); } catch (e) {} showGate(KEY !== ""); return; }
-    var d = await r.json();
-    if (d.error) { $("note").textContent = d.error; return; }
+    var d = await readJson(r);
+    if (d.error) { showError(d.error, $("note")); return; }
     showApp();
     DATA = d.leads || [];
     $("k-total").textContent = d.total;
@@ -426,7 +436,7 @@
   /* ---------------- Navegación ---------------- */
   function refresh() {
     var p = currentTab === "metrics" ? loadMetrics() : loadContacts();
-    return p.catch(function () { $("upd").textContent = " · sin conexión, reintentando..."; });
+    return p.catch(function () { showError("sin conexión, reintentando...", $("upd")); });
   }
   function boot() {
     if (!KEY) { showGate(false); return; }
