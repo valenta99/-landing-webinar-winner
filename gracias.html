@@ -387,5 +387,23 @@
 
 </div>
 
+<script>
+  // Beacon de visitas (alimenta las métricas del panel /admin). Mismo vid que la landing.
+  (function () {
+    try {
+      var vid = localStorage.getItem('mc_vid');
+      if (!vid) {
+        vid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('mc_vid', vid);
+      }
+      navigator.sendBeacon('/api/hit', JSON.stringify({
+        path: location.pathname,
+        vid: vid,
+        source: new URLSearchParams(location.search).get('utm_source') || ''
+      }));
+    } catch (e) {}
+  })();
+</script>
+
 </body>
 </html>

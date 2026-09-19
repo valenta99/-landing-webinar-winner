@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Panel de registros</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Mismo sistema de marca que la landing (index.html) */
+  :root {
+    --ink: #141414;
+    --violet-deep: #540336;
+    --violet: #7E3660;
+    --violet-border: rgba(126, 54, 96, 0.45);
+    --violet-border-soft: rgba(126, 54, 96, 0.22);
+    --violet-wash: rgba(84, 3, 54, 0.2);
+    --bg-card: color-mix(in srgb, var(--violet-deep) 16%, var(--ink) 84%);
+    --text-hi: #FFFFFF;
+    --text-mid: rgba(255, 255, 255, 0.78);
+    --text-lo: rgba(255, 255, 255, 0.55);
+    --gold-light: #F5C563;
+    --gold-dark: #D4A24C;
+    --danger: #FF6B6B;
+    --danger-bg: rgba(255, 107, 107, 0.1);
+    --danger-bd: rgba(255, 107, 107, 0.4);
+    --ok: #4ADE80;
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  html, body { background: var(--ink); color: var(--text-hi); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; background: linear-gradient(180deg, var(--ink) 0%, #1c0a15 60%, var(--ink) 100%); }
+  [hidden] { display: none !important; }
+
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 22px 16px 64px; }
+
+  /* Top bar */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .brand { font-weight: 800; font-size: 15px; letter-spacing: 0.02em; }
+  .brand span { color: var(--text-lo); font-weight: 500; font-size: 12.5px; margin-left: 8px; }
+  .tabs { display: flex; gap: 8px; }
+  .tab, .rg, .btn {
+    background: var(--bg-card); border: 1px solid var(--violet-border); color: var(--text-mid);
+    border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .tab:hover, .rg:hover, .btn:hover { color: var(--text-hi); border-color: var(--violet); }
+  .tab.active, .rg.active { background: linear-gradient(135deg, var(--gold-light), var(--gold-dark)); color: #201405; border-color: transparent; }
+  .btn.gold { color: var(--gold-light); border-color: rgba(245, 197, 99, 0.4); }
+  .btn.active { background: var(--danger-bg); border-color: var(--danger-bd); color: var(--danger); }
+  .rangesel { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+
+  /* Alertas */
+  .alert { background: var(--danger-bg); border: 1px solid var(--danger-bd); color: #FFB4B4; border-radius: 12px; padding: 12px 16px; font-size: 13.5px; line-height: 1.5; margin-bottom: 16px; }
+  .alert b { color: #fff; }
+
+  /* Tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .tile { background: var(--bg-card); border: 1px solid var(--violet-border); border-radius: 16px; padding: 16px 18px; }
+  .tile.hero { border-color: rgba(245, 197, 99, 0.45); }
+  .tile .lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-lo); }
+  .tile .num { font-size: 32px; font-weight: 800; margin-top: 6px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .tile.hero .num { color: var(--gold-light); }
+  .tile .sub { font-size: 12px; color: var(--text-lo); margin-top: 4px; }
+
+  /* Paneles */
+  .panel { background: var(--bg-card); border: 1px solid var(--violet-border); border-radius: 16px; padding: 18px 20px; margin-bottom: 14px; }
+  .panel h2 { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-mid); margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .legend { display: inline-flex; gap: 12px; font-size: 11.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-lo); }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+
+  /* Serie temporal */
+  .hours { display: flex; align-items: flex-end; gap: 4px; overflow-x: auto; padding-bottom: 4px; min-height: 150px; }
+  .hcol { flex: 1 0 22px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; }
+  .hval { font-size: 11px; font-weight: 700; color: var(--gold-light); }
+  .hval.zero { color: var(--text-lo); font-weight: 500; }
+  .hduo { display: flex; align-items: flex-end; gap: 2px; height: 96px; }
+  .hbar { width: 8px; background: var(--gold-light); border-radius: 3px 3px 0 0; }
+  .vbar { width: 8px; background: rgba(255, 255, 255, 0.3); border-radius: 3px 3px 0 0; }
+  .hlbl { font-size: 10px; color: var(--text-lo); }
+
+  /* Barras horizontales */
+  .row { display: grid; grid-template-columns: minmax(70px, 34%) 1fr 34px; gap: 10px; align-items: center; margin-bottom: 9px; font-size: 13px; }
+  .row .name { color: var(--text-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .track { background: rgba(255, 255, 255, 0.06); border-radius: 999px; height: 8px; overflow: hidden; }
+  .row .fill { height: 100%; background: linear-gradient(90deg, var(--violet), var(--gold-light)); border-radius: 999px; }
+  .row .val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--text-lo); font-size: 13px; padding: 8px 0; }
+
+  /* Tablas */
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-lo); text-align: left; padding: 10px 12px; white-space: nowrap; }
+  th[data-sort] { cursor: pointer; }
+  th[data-sort]:hover { color: var(--text-hi); }
+  td { padding: 10px 12px; font-size: 13.5px; border-top: 1px solid var(--violet-border-soft); color: var(--text-mid); vertical-align: middle; }
+  td.n { color: var(--text-hi); font-weight: 600; white-space: nowrap; }
+  td.t { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #leads-table { min-width: 900px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; background: var(--violet-wash); border: 1px solid var(--violet-border); color: var(--text-mid); }
+  .pill.ok { color: var(--ok); border-color: rgba(74, 222, 128, 0.35); background: rgba(74, 222, 128, 0.08); }
+  .pill.bad { color: var(--danger); border-color: var(--danger-bd); background: var(--danger-bg); }
+  a.lnk { color: var(--gold-light); text-decoration: none; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  a.lnk:hover { text-decoration: underline; }
+  .muted { color: var(--text-lo); }
+  tr.bad td { background: var(--danger-bg); }
+  .trunc { display: inline-block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+
+  /* Controles de la lista */
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  input, select {
+    background: var(--bg-card); border: 1px solid var(--violet-border); color: var(--text-hi);
+    border-radius: 12px; padding: 10px 14px; font-size: 13.5px; font-family: inherit; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--gold-light); }
+  input::placeholder { color: var(--text-lo); }
+  input.search { flex: 1; min-width: 220px; }
+  select option { background: #1c0a15; }
+
+  .foot { color: var(--text-lo); font-size: 12px; text-align: center; margin-top: 18px; }
+
+  /* Login */
+  .gate { max-width: 360px; margin: 18vh auto 0; text-align: center; padding: 0 16px; }
+  .gate .brand { margin-bottom: 4px; }
+  .gate input { width: 100%; margin: 16px 0 10px; text-align: center; }
+  .gate button { width: 100%; padding: 12px; border: none; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit; background: linear-gradient(135deg, var(--gold-light), var(--gold-dark)); color: #201405; }
+  .gate .err { color: var(--danger); font-size: 13px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate" hidden>
+  <div class="brand">Panel de registros</div>
+  <input id="gate-key" type="password" placeholder="Clave de acceso" autocomplete="current-password">
+  <button type="button" id="gate-btn">Entrar</button>
+  <div class="err" id="gate-err" hidden>Clave incorrecta.</div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <div class="top">
+    <div class="brand">Panel de registros<span id="upd"></span></div>
+    <div class="tabs">
+      <button type="button" class="tab active" data-tab="metrics">Métricas</button>
+      <button type="button" class="tab" data-tab="contacts">Contactos</button>
+    </div>
+  </div>
+
+  <!-- ===================== MÉTRICAS ===================== -->
+  <div id="view-metrics">
+    <div class="rangesel">
+      <button type="button" class="rg active" data-range="today">Hoy</button>
+      <button type="button" class="rg" data-range="7d">7 días</button>
+      <button type="button" class="rg" data-range="30d">30 días</button>
+      <button type="button" class="rg" data-range="total">Total</button>
+    </div>
+
+    <div class="alert" id="ghl-alert" hidden></div>
+
+    <div class="tiles">
+      <div class="tile hero"><div class="lbl" id="lbl-reg">Registros</div><div class="num" id="t-reg">–</div><div class="sub" id="t-reg-total">–</div></div>
+      <div class="tile"><div class="lbl" id="lbl-uniq">Visitantes</div><div class="num" id="t-uniq">–</div><div class="sub" id="t-hits">–</div></div>
+      <div class="tile"><div class="lbl" id="lbl-conv">Conversión</div><div class="num" id="t-conv">–</div><div class="sub">registros / visitantes de la landing</div></div>
+      <div class="tile"><div class="lbl">Llegaron a gracias</div><div class="num" id="t-gracias">–</div><div class="sub">visitantes únicos</div></div>
+    </div>
+
+    <div class="panel">
+      <h2><span id="lbl-series">Actividad</span><span class="legend" id="legend" hidden><span><i style="background:#F5C563"></i>registros</span><span><i style="background:rgba(255,255,255,0.3)"></i>visitas</span></span></h2>
+      <div class="hours" id="hours"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel"><h2>Registros por fuente (utm_source)</h2><div id="sources"></div></div>
+      <div class="panel"><h2>Registros por campaña (utm_campaign)</h2><div id="campaigns"></div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Últimos registros</h2>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Fecha (ARG)</th><th>Nombre</th><th>Email</th><th>Fuente</th></tr></thead>
+          <tbody id="recent"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== CONTACTOS ===================== -->
+  <div id="view-contacts" hidden>
+    <div class="tiles">
+      <div class="tile hero"><div class="lbl">Total contactos</div><div class="num" id="k-total">–</div></div>
+      <div class="tile"><div class="lbl">Mostrando</div><div class="num" id="k-shown">–</div></div>
+      <div class="tile"><div class="lbl">Sin sincronizar con GHL</div><div class="num" id="k-err">–</div></div>
+    </div>
+
+    <div class="controls">
+      <input class="search" id="q" placeholder="Buscar nombre, email o teléfono...">
+      <select id="f-source"><option value="">Todas las fuentes</option></select>
+      <button type="button" class="btn" id="only-err">Solo con error de GHL</button>
+      <button type="button" class="btn gold" id="export">Exportar CSV</button>
+    </div>
+
+    <div class="panel" style="padding:6px 8px;">
+      <div class="tablewrap">
+        <table id="leads-table">
+          <thead>
+            <tr>
+              <th data-sort="at">Fecha (ARG)</th>
+              <th data-sort="name">Nombre</th>
+              <th data-sort="email">Email</th>
+              <th data-sort="phone">WhatsApp</th>
+              <th data-sort="source">Fuente</th>
+              <th data-sort="campaign">Campaña</th>
+              <th data-sort="content">Anuncio</th>
+              <th data-sort="ghlOk">GHL</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="foot" id="note"></div>
+  </div>
+
+  <p class="foot">Se actualiza solo cada 30 segundos</p>
+</div>
+
+<script>
+  var STORE_KEY = "mc_dash_key";
+  var KEY = "";
+  try { KEY = localStorage.getItem(STORE_KEY) || ""; } catch (e) {}
+
+  var currentTab = "metrics", currentRange = "today";
+  var DATA = [], VIEW = [], onlyErr = false, sortKey = "at", sortDir = -1, dropdownReady = false;
+
+  function $(id) { return document.getElementById(id); }
+  // Todo lo que viene de la URL de un visitante (utm_*) es texto no confiable: siempre escapar.
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function fmtDate(iso) {
+    var d = new Date(new Date(iso).getTime() - 3 * 3600000);
+    return pad(d.getUTCDate()) + "/" + pad(d.getUTCMonth() + 1) + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes());
+  }
+
+  function api(path) {
+    return fetch(path, { headers: { "x-dash-key": KEY }, cache: "no-store" });
+  }
+  function showGate(wrong) {
+    $("app").hidden = true;
+    $("gate").hidden = false;
+    $("gate-err").hidden = !wrong;
+  }
+  function showApp() { $("gate").hidden = true; $("app").hidden = false; }
+
+  function saveKey() {
+    KEY = $("gate-key").value.trim();
+    if (!KEY) return;
+    try { localStorage.setItem(STORE_KEY, KEY); } catch (e) {}
+    boot();
+  }
+
+  /* ---------------- Métricas ---------------- */
+  var RANGE_TXT = { today: "hoy", "7d": "últimos 7 días", "30d": "últimos 30 días", total: "total" };
+
+  function bars(el, obj) {
+    var entries = Object.keys(obj).map(function (k) { return [k, obj[k]]; })
+      .sort(function (a, b) { return b[1] - a[1]; }).slice(0, 8);
+    if (!entries.length) { el.innerHTML = "<div class='empty'>Sin datos en este rango.</div>"; return; }
+    var max = Math.max.apply(null, entries.map(function (e) { return e[1]; }));
+    el.innerHTML = entries.map(function (e) {
+      return "<div class='row'><div class='name' title='" + esc(e[0]) + "'>" + esc(e[0]) + "</div>" +
+        "<div class='track'><div class='fill' style='width:" + Math.round((e[1] / max) * 100) + "%'></div></div>" +
+        "<div class='val'>" + e[1] + "</div></div>";
+    }).join("");
+  }
+
+  async function loadMetrics() {
+    var r = await api("/api/stats?range=" + currentRange);
+    if (r.status === 401) { try { localStorage.removeItem(STORE_KEY); } catch (e) {} showGate(KEY !== ""); return; }
+    var d = await r.json();
+    if (d.error) { $("upd").textContent = " · " + d.error; return; }
+    showApp();
+
+    var rt = RANGE_TXT[d.range] || "hoy";
+    $("lbl-reg").textContent = "Registros " + rt;
+    $("lbl-uniq").textContent = "Visitantes " + rt;
+    $("lbl-conv").textContent = "Conversión " + rt;
+
+    $("t-reg").textContent = d.leadsInRange;
+    $("t-reg-total").textContent = d.leadsTotal + " totales";
+    $("t-uniq").textContent = d.uniquesInRange == null ? "—" : d.uniquesInRange;
+    $("t-hits").textContent = (d.hitsInRange == null ? "—" : d.hitsInRange) + " páginas vistas";
+    $("t-conv").textContent = d.conversionInRange == null ? "—" : d.conversionInRange + "%";
+    $("t-gracias").textContent = d.graciasUniques == null ? "—" : d.graciasUniques;
+
+    var alertEl = $("ghl-alert");
+    if (d.ghlErrors > 0) {
+      alertEl.hidden = false;
+      alertEl.innerHTML = "<b>" + d.ghlErrors + " registro" + (d.ghlErrors === 1 ? "" : "s") +
+        "</b> no se sincronizó con GHL (quedó guardado acá). Revisalo en la pestaña Contactos.";
+    } else { alertEl.hidden = true; }
+
+    var s = d.series || [];
+    var hasVisits = s.some(function (x) { return x.visits != null; });
+    $("legend").hidden = !hasVisits;
+    $("lbl-series").textContent = d.range === "total" ? "Actividad" :
+      (d.seriesMode === "hour" ? "Actividad por hora (hoy, hora ARG)" : "Actividad por día (" + rt + ")");
+    if (!s.length) {
+      $("hours").innerHTML = "<div class='empty'>La serie diaria no se muestra en el rango total.</div>";
+    } else {
+      var max = Math.max.apply(null, s.map(function (x) { return x.value; }).concat([1]));
+      var vmax = Math.max.apply(null, s.map(function (x) { return x.visits || 0; }).concat([1]));
+      $("hours").innerHTML = s.map(function (x) {
+        var tip = x.label + ": " + x.value + " registros" + (x.visits != null ? " · " + x.visits + " visitas" : "");
+        var vis = x.visits != null ? "<div class='vbar' style='height:" + Math.max(2, Math.round((x.visits / vmax) * 96)) + "px'></div>" : "";
+        return "<div class='hcol' title='" + esc(tip) + "'>" +
+          "<div class='hval" + (x.value === 0 ? " zero" : "") + "'>" + x.value + "</div>" +
+          "<div class='hduo'><div class='hbar' style='height:" + Math.max(2, Math.round((x.value / max) * 96)) + "px'></div>" + vis + "</div>" +
+          "<div class='hlbl'>" + esc(x.label) + "</div></div>";
+      }).join("");
+    }
+
+    bars($("sources"), d.sources || {});
+    bars($("campaigns"), d.campaigns || {});
+
+    $("recent").innerHTML = (d.recent || []).map(function (l) {
+      return "<tr><td class='t'>" + fmtDate(l.at) + "</td><td class='n'>" + esc(l.name || "-") + "</td><td>" + esc(l.email || "-") + "</td><td>" + esc(l.source || "-") + "</td></tr>";
+    }).join("") || "<tr><td colspan='4' class='empty'>Todavía no hay registros.</td></tr>";
+
+    $("upd").textContent = " · actualizado " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  /* ---------------- Contactos ---------------- */
+  async function loadContacts() {
+    var r = await api("/api/leads");
+    if (r.status === 401) { try { localStorage.removeItem(STORE_KEY); } catch (e) {} showGate(KEY !== ""); return; }
+    var d = await r.json();
+    if (d.error) { $("note").textContent = d.error; return; }
+    showApp();
+    DATA = d.leads || [];
+    $("k-total").textContent = d.total;
+    $("k-err").textContent = (d.counts && d.counts.ghlErrors) || 0;
+
+    if (!dropdownReady) { // solo la primera vez, para no perder la selección en cada refresh
+      var sel = $("f-source");
+      var bySource = (d.counts && d.counts.bySource) || {};
+      Object.keys(bySource).sort().forEach(function (s) {
+        var o = document.createElement("option");
+        o.value = s; o.textContent = s + " (" + bySource[s] + ")";
+        sel.appendChild(o);
+      });
+      dropdownReady = true;
+    }
+    $("upd").textContent = " · actualizado " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    renderContacts();
+  }
+
+  function filtered() {
+    var q = $("q").value.trim().toLowerCase();
+    var fs = $("f-source").value;
+    return DATA.filter(function (l) {
+      if (onlyErr && l.ghlOk) return false;
+      if (fs && l.source !== fs) return false;
+      if (q && (l.name + " " + l.email + " " + l.phone).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+  }
+
+  function renderContacts() {
+    VIEW = filtered();
+    VIEW.sort(function (a, b) {
+      var x = a[sortKey], y = b[sortKey];
+      if (x == null) x = ""; if (y == null) y = "";
+      if (x < y) return -1 * sortDir;
+      if (x > y) return 1 * sortDir;
+      return 0;
+    });
+    $("k-shown").textContent = VIEW.length;
+    var tb = $("rows");
+    if (!VIEW.length) { tb.innerHTML = "<tr><td colspan='8' class='empty'>No hay contactos con estos filtros.</td></tr>"; return; }
+    tb.innerHTML = VIEW.map(function (l) {
+      var wa = l.wa ? "<a class='lnk' href='" + esc(l.wa) + "' target='_blank' rel='noopener'>" + esc(l.phone) + "</a>" : "<span class='muted'>sin tel</span>";
+      var camp = l.campaign ? "<span class='trunc' title='" + esc(l.campaign) + "'>" + esc(l.campaign) + "</span>" : "<span class='muted'>—</span>";
+      var ad = l.content ? "<span class='trunc' title='" + esc(l.content) + "'>" + esc(l.content) + "</span>" : "<span class='muted'>—</span>";
+      var ghl = l.ghlOk
+        ? (l.ghlUrl ? "<a class='pill ok' href='" + esc(l.ghlUrl) + "' target='_blank' rel='noopener'>OK · abrir</a>" : "<span class='pill ok'>OK</span>")
+        : "<span class='pill bad' title='" + esc(l.ghlStatus) + "'>Error</span>";
+      return "<tr class='" + (l.ghlOk ? "" : "bad") + "'>" +
+        "<td class='t'>" + fmtDate(l.at) + "</td>" +
+        "<td class='n'>" + esc(l.name) + "</td>" +
+        "<td>" + esc(l.email) + "</td>" +
+        "<td>" + wa + "</td>" +
+        "<td><span class='pill'>" + esc(l.source) + "</span></td>" +
+        "<td>" + camp + "</td><td>" + ad + "</td><td>" + ghl + "</td></tr>";
+    }).join("");
+    $("note").textContent = "Los encabezados ordenan la tabla. Tocá el WhatsApp para escribirle directo.";
+  }
+
+  // Los valores vienen de la URL del visitante: neutralizamos fórmulas de planilla (=, +, -, @).
+  function csvCell(v) {
+    var s = String(v == null ? "" : v);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  function exportCSV() {
+    var head = ["Fecha", "Nombre", "Email", "Telefono", "Fuente", "Medio", "Campana", "Anuncio", "GHL"];
+    var lines = [head.join(",")];
+    VIEW.forEach(function (l) {
+      lines.push([fmtDate(l.at), l.name, l.email, l.phone, l.source, l.medium, l.campaign, l.content, l.ghlOk ? "ok" : l.ghlStatus].map(csvCell).join(","));
+    });
+    var blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "registros-masterclass.csv";
+    a.click();
+  }
+
+  /* ---------------- Navegación ---------------- */
+  function refresh() {
+    var p = currentTab === "metrics" ? loadMetrics() : loadContacts();
+    return p.catch(function () { $("upd").textContent = " · sin conexión, reintentando..."; });
+  }
+  function boot() {
+    if (!KEY) { showGate(false); return; }
+    refresh();
+  }
+
+  document.querySelectorAll(".tab").forEach(function (b) {
+    b.addEventListener("click", function () {
+      currentTab = b.getAttribute("data-tab");
+      document.querySelectorAll(".tab").forEach(function (x) { x.classList.toggle("active", x === b); });
+      $("view-metrics").hidden = currentTab !== "metrics";
+      $("view-contacts").hidden = currentTab !== "contacts";
+      refresh();
+    });
+  });
+  document.querySelectorAll(".rg").forEach(function (b) {
+    b.addEventListener("click", function () {
+      currentRange = b.getAttribute("data-range");
+      document.querySelectorAll(".rg").forEach(function (x) { x.classList.toggle("active", x === b); });
+      refresh();
+    });
+  });
+  document.querySelectorAll("th[data-sort]").forEach(function (th) {
+    th.addEventListener("click", function () {
+      var k = th.getAttribute("data-sort");
+      if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = (k === "at") ? -1 : 1; }
+      renderContacts();
+    });
+  });
+  $("q").addEventListener("input", renderContacts);
+  $("f-source").addEventListener("change", renderContacts);
+  $("only-err").addEventListener("click", function () {
+    onlyErr = !onlyErr;
+    this.classList.toggle("active", onlyErr);
+    renderContacts();
+  });
+  $("export").addEventListener("click", exportCSV);
+  $("gate-btn").addEventListener("click", saveKey);
+  $("gate-key").addEventListener("keydown", function (e) { if (e.key === "Enter") saveKey(); });
+
+  boot();
+  setInterval(function () { if (KEY && !$("app").hidden) refresh(); }, 30000);
+</script>
+</body>
+</html>

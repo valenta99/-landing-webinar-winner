@@ -1240,6 +1240,32 @@
 
 <script>
   /* ==========================================================================
+     Beacon de visitas (alimenta las métricas del panel /admin)
+     vid = id anónimo del visitante en localStorage; une visitas y registro.
+     ========================================================================== */
+  function getVisitorId() {
+    try {
+      var vid = localStorage.getItem('mc_vid');
+      if (!vid) {
+        vid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('mc_vid', vid);
+      }
+      return vid;
+    } catch (e) { return ''; }
+  }
+  (function () {
+    try {
+      navigator.sendBeacon('/api/hit', JSON.stringify({
+        path: location.pathname,
+        vid: getVisitorId(),
+        source: new URLSearchParams(location.search).get('utm_source') || ''
+      }));
+    } catch (e) {}
+  })();
+</script>
+
+<script>
+  /* ==========================================================================
      JS — Acordeón de FAQ (Bloque 10)
      Un solo item abierto a la vez, altura animada.
      ========================================================================== */
@@ -1359,10 +1385,12 @@
       }
 
       // Cualquier parámetro de tracking presente en la URL (utm_*, gclid, fbclid, etc.)
-      var payload = { nombre: nombre, email: email, telefono: telefono };
+      // va aparte, en `tracking`, para que un parámetro de la URL nunca pise los campos del form.
+      var tracking = {};
       new URLSearchParams(window.location.search).forEach(function (value, key) {
-        payload[key] = value;
+        tracking[key] = value;
       });
+      var payload = { nombre: nombre, email: email, telefono: telefono, vid: getVisitorId(), tracking: tracking };
 
       // Estado de carga breve en el botón
       submitBtn.disabled = true;
