@@ -812,6 +812,21 @@
 
   @media (min-width: 900px) {
     .lp-container, .lp-container-narrow { padding: 0 24px; }
+
+    /* Testimonios en desktop: grilla a todo el ancho del contenedor, sin carrusel ni flechas.
+       auto-fit reparte el ancho entre las tarjetas que haya (3, 4, 5...). */
+    .lp-test-wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+    .lp-test-track {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      overflow: visible;
+      padding: 8px 0 28px;
+      scroll-snap-type: none;
+      cursor: default;
+    }
+    .lp-test-card { flex: none; }
+    .lp-test-arrows { display: none; }
   }
 
   @media (max-width: 640px) {
