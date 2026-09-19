@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
   var hits = results[1];
 
   if (leads === null) {
-    return res.status(500).json({ error: 'No se pudo leer mc_leads (revisá las envs de Supabase y que corriste supabase/schema.sql)' });
+    return res.status(500).json({ error: 'No se pudo leer mc_leads (revisá las envs de Supabase y que corriste supabase/schema.sql). Detalle: ' + db.lastError() });
   }
 
   // Dedup por email: un registro = una persona. Nos quedamos con el PRIMERO

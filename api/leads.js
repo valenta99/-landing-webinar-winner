@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
     '/rest/v1/mc_leads?select=created_at,name,email,phone,tracking,ghl_contact_id,ghl_status&order=created_at.desc'
   );
   if (raw === null) {
-    return res.status(500).json({ error: 'No se pudo leer mc_leads (revisá las envs de Supabase y que corriste supabase/schema.sql)' });
+    return res.status(500).json({ error: 'No se pudo leer mc_leads (revisá las envs de Supabase y que corriste supabase/schema.sql). Detalle: ' + db.lastError() });
   }
 
   // Dedup por email conservando el registro MÁS RECIENTE (raw viene desc: el primero es el nuevo).
