@@ -33,3 +33,10 @@ create table if not exists public.mc_hits (
 alter table public.mc_hits enable row level security;
 create index if not exists mc_hits_created_idx on public.mc_hits (created_at desc);
 create index if not exists mc_hits_path_idx on public.mc_hits (path);
+
+-- Permisos para la service_role (los proyectos nuevos de Supabase no los dan solos
+-- en tablas creadas por SQL; sin esto la API devuelve 403 "permission denied").
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.mc_leads to service_role;
+grant select, insert, update, delete on public.mc_hits to service_role;
+grant usage, select on all sequences in schema public to service_role;
