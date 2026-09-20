@@ -762,6 +762,9 @@
     border-radius: 50%;
   }
   .lp-founder-text { flex: 1 1 auto; min-width: 0; }
+  /* El destacado con la cifra y el corte de párrafo son solo de móvil:
+     en desktop la sección queda exactamente igual que antes. */
+  .lp-founder-stat { display: none; }
   .lp-founder-block .who {
     font-size: 12px;
     font-weight: 700;
@@ -981,41 +984,91 @@
     .lp-optin.is-close { padding: 56px 0 64px; }
     .lp-module { padding: 26px 20px; }
     .lp-form-real { padding: 26px 20px; }
-    /* Bios en móvil: ficha compacta. Grid de 2 columnas donde la primera
-       fila es foto + etiqueta ("SOBRE AHILU") centradas entre sí, y el
-       párrafo ocupa la fila de abajo a todo el ancho, alineado a la
-       izquierda. El display:contents del wrapper de texto sube sus hijos
-       (.who y el <p>) a items del grid, así no hace falta tocar el HTML. */
+    /* Bios en móvil: cada una es una tarjeta de vidrio ciruela sobre el
+       fondo de la sección. Grid de 2 columnas y 3 filas:
+         fila 1 -> foto circular + etiqueta ("SOBRE AHILU")
+         fila 2 -> destacado dorado con la cifra
+         fila 3 -> la bio, a todo el ancho
+       El display:contents del wrapper de texto sube sus hijos (.who, el
+       destacado y el <p>) a items del grid, sin anidar más HTML. */
     .lp-founder-block {
       display: grid;
       grid-template-columns: auto 1fr;
       column-gap: 14px;
-      row-gap: 10px;
+      row-gap: 12px;
       align-items: center;
       text-align: left;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+      padding: 20px;
+      border-radius: 18px;
+      border: 1px solid rgba(245, 197, 99, 0.28);
+      background:
+        linear-gradient(180deg, rgba(126, 54, 96, 0.26) 0%, rgba(84, 3, 54, 0.34) 100%);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
     }
     .lp-founder-text { display: contents; }
-    /* En grid, flex-basis ya no controla el alto: fijamos el círculo a mano. */
+    /* En grid, flex-basis ya no controla el alto: fijamos el círculo a mano.
+       El anillo dorado reemplaza al borde punteado del placeholder. */
     .lp-founder-photo {
       grid-column: 1; grid-row: 1;
-      flex: 0 0 auto; width: 68px; height: 68px;
+      flex: 0 0 auto; width: 72px; height: 72px;
+      border: 2px solid var(--gold-light);
+      box-shadow: 0 0 0 4px rgba(245, 197, 99, 0.10);
     }
     .lp-founder-block .who {
       grid-column: 2; grid-row: 1;
       align-self: center;
       margin-bottom: 0;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: none;
+      font-variant: all-small-caps;
+      color: var(--gold-light);
+    }
+    /* Píldora dorada con una cifra que el propio párrafo ya menciona. */
+    .lp-founder-stat {
+      display: inline-flex;
+      align-items: center;
+      grid-column: 1 / -1; grid-row: 2;
+      justify-self: start;
+      max-width: 100%;
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(245, 197, 99, 0.45);
+      background: rgba(245, 197, 99, 0.12);
+      color: var(--gold-light);
+      font-size: 14.5px;
+      font-weight: 800;
+      line-height: 1.25;
     }
     .lp-founder-block p {
-      grid-column: 1 / -1; grid-row: 2;
+      grid-column: 1 / -1; grid-row: 3;
       margin-bottom: 0;
     }
+    /* Corta la bio en dos párrafos, en el mismo punto de la oración. */
+    .lp-bio-corte { display: block; margin-top: 12px; }
     /* Bios y párrafo de cierre: a la izquierda y más aireado de leer. */
     .lp-founders-content p {
       text-align: left;
-      font-size: 16.5px;
-      line-height: 1.6;
+      font-size: 16px;
+      line-height: 1.65;
+      color: rgba(255, 255, 255, 0.9);
     }
+    /* Cierre: el mensaje clave de la sección, no un párrafo suelto. */
+    .lp-founders-content .lp-founders-close {
+      margin-top: 24px;
+      margin-bottom: 0;
+      padding: 18px 18px 18px 16px;
+      border-left: 3px solid var(--gold-light);
+      border-radius: 0 14px 14px 0;
+      background: rgba(84, 3, 54, 0.45);
+      font-size: 17px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.92);
+    }
+    .lp-founders-close .lp-clave { color: var(--gold-light); font-weight: 800; }
+    .lp-founders-content .lp-cta-wrap { margin-top: 28px; }
     .lp-test-card { flex: 0 0 100%; height: 420px; padding: 22px 18px; }
     .lp-faq-q { padding: 16px 18px; font-size: 14.5px; }
     .lp-faq-a p { padding: 0 18px 18px; font-size: 14px; }
@@ -1314,7 +1367,9 @@
           <div class="lp-founder-photo has-photo"><img src="assets/ahilu.webp" width="400" height="400" alt="Retrato de Ahilu, cofundadora de la formación de ecommerce."></div>
           <div class="lp-founder-text">
             <div class="who">Sobre Ahilu</div>
-            <p>Llevo 6 años emprendiendo en negocios digitales y, durante ese tiempo, probé prácticamente de todo para hacer dinero online. Hace 2 años conocí la venta de ebooks y mi vida cambió por completo. En mi primer año generé más de USD 500.000 vendiendo productos digitales. Este negocio me permitió cumplir mi sueño de viajar por el mundo y, sobre todo, tener la libertad que siempre quise.</p>
+            <!-- Destacado: repite una cifra que ya dice el párrafo. Solo visible en móvil. -->
+            <div class="lp-founder-stat">+ USD 500.000 en el primer año</div>
+            <p>Llevo 6 años emprendiendo en negocios digitales y, durante ese tiempo, probé prácticamente de todo para hacer dinero online. Hace 2 años conocí la venta de ebooks y mi vida cambió por completo. <span class="lp-bio-corte">En mi primer año generé más de USD 500.000 vendiendo productos digitales. Este negocio me permitió cumplir mi sueño de viajar por el mundo y, sobre todo, tener la libertad que siempre quise.</span></p>
           </div>
         </div>
 
@@ -1323,11 +1378,13 @@
           <div class="lp-founder-photo has-photo"><img src="assets/cami.webp" width="400" height="400" alt="Retrato de Cami, cofundadora de la formación de ecommerce."></div>
           <div class="lp-founder-text">
             <div class="who">Sobre Cami</div>
-            <p>Pasé de trabajar en McDonald's a conocer el ecommerce y enamorarme de este mundo. Empecé desde cero y llegué a facturar más de USD 200.000 en un mes. Con toda esa experiencia conocí los productos digitales y descubrí una forma mucho más simple y escalable de hacer ecommerce: vender ebooks en todo el mundo, sin stock ni envíos.</p>
+            <!-- Destacado: repite una cifra que ya dice el párrafo. Solo visible en móvil. -->
+            <div class="lp-founder-stat">+ USD 200.000 en un mes</div>
+            <p>Pasé de trabajar en McDonald's a conocer el ecommerce y enamorarme de este mundo. Empecé desde cero y llegué a facturar más de USD 200.000 en un mes. <span class="lp-bio-corte">Con toda esa experiencia conocí los productos digitales y descubrí una forma mucho más simple y escalable de hacer ecommerce: vender ebooks en todo el mundo, sin stock ni envíos.</span></p>
           </div>
         </div>
 
-        <p>Hoy, juntas, creamos el Método Winner. Y el 29 de septiembre te vamos a enseñar, en una clase 100% gratuita, el método que usamos para crear y vender productos digitales de forma simple, rápida y escalable.</p>
+        <p class="lp-founders-close">Hoy, juntas, creamos el <span class="lp-clave">Método Winner</span>. Y el <span class="lp-clave">29 de septiembre</span> te vamos a enseñar, en una clase 100% gratuita, el método que usamos para crear y vender productos digitales de forma simple, rápida y escalable.</p>
 
         <div class="lp-cta-wrap">
           <a href="#registro" class="lp-cta" data-cta="historia">Quiero mi lugar gratis</a>
