@@ -21,6 +21,15 @@
 <noscript><img height="1" width="1" style="display:none"
   src="https://www.facebook.com/tr?id=1336554037852872&ev=PageView&noscript=1" alt=""></noscript>
 <!-- FIN META PIXEL -->
+
+<!-- ======================================================================
+     WISTIA — reproductor de la VSL (media sxset7ki5h).
+     Van acá, una sola vez: ambos son async, así que no bloquean el render,
+     y estando en el <head> el custom element queda definido antes de que el
+     usuario llegue a scrollear al video.
+     ====================================================================== -->
+<script src="https://fast.wistia.com/player.js" async></script>
+<script src="https://fast.wistia.com/embed/sxset7ki5h.js" async type="module"></script>
 <title>Masterclass gratuita — Registro</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -402,31 +411,29 @@
     max-width: 620px;
     margin: 0 auto 28px;
   }
+  /* Contenedor del reproductor de Wistia. Mantiene el mismo ancho, borde y
+     sombra que tenía el placeholder anterior. overflow:hidden para que el
+     video respete las esquinas redondeadas. */
   .lp-video-frame {
     max-width: 780px;
     margin: 0 auto;
-    aspect-ratio: 16 / 9;
     border-radius: var(--radius-lg);
     background: linear-gradient(180deg, color-mix(in srgb, var(--violet-deep) 30%, var(--ink) 70%) 0%, var(--ink) 100%);
-    border: 1px dashed var(--violet-border);
     box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 10px;
-    color: var(--text-lo);
-    text-align: center;
-    padding: 24px;
+    overflow: hidden;
   }
-  .lp-video-frame .play-ico {
-    width: 60px; height: 60px; border-radius: 50%;
-    border: 2px solid var(--violet-border);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--text-hi); font-size: 22px;
+  .lp-video-frame wistia-player {
+    display: block;
+    width: 100%;
   }
-  .lp-video-frame .video-label { font-size: 14px; font-weight: 600; color: var(--text-mid); }
-  .lp-video-frame .video-sub { font-size: 12.5px; color: var(--text-lo); }
+  /* Swatch borroso mientras el custom element todavía no está definido:
+     evita el salto de layout reservando el alto del 16/9. */
+  wistia-player[media-id='sxset7ki5h']:not(:defined) {
+    background: center / contain no-repeat url('https://fast.wistia.com/embed/medias/sxset7ki5h/swatch');
+    display: block;
+    filter: blur(5px);
+    padding-top: 56.25%;
+  }
 
   /* ==========================================================================
      BLOQUE 3/5/7/9 — OPTIN (botón que hace scroll al formulario real)
@@ -1047,11 +1054,10 @@
     <div class="lp-container">
       <p class="lp-vsl-heading">Mirá este video de 3 minutos antes de anotarte</p>
 
-      <!-- VIDEO VSL (3 MIN) VA ACÁ, todavía no está grabado -->
+      <!-- VIDEO VSL (3 MIN) — Wistia. Los dos scripts del player están en el
+           <head>, una sola vez; acá va solo el custom element. -->
       <div class="lp-video-frame">
-        <div class="play-ico">▶</div>
-        <div class="video-label">Video VSL — pendiente de grabación</div>
-        <div class="video-sub">Acá va a ir el video de Ahilu (guion aparte, no es texto de landing)</div>
+        <wistia-player media-id="sxset7ki5h" aspect="1.7777777777777777"></wistia-player>
       </div>
 
       <div class="lp-cta-wrap">
