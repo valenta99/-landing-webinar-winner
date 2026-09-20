@@ -1124,7 +1124,7 @@
             <line x1="23" y1="9" x2="17" y2="15"></line>
             <line x1="17" y1="9" x2="23" y2="15"></line>
           </svg>
-          <span>HACÉ CLICK PARA ACTIVAR EL SONIDO</span>
+          <span>HACÉ CLICK PARA VER LA DATA</span>
         </button>
       </div>
 
@@ -1159,8 +1159,11 @@
             if (player.muted) overlay.hidden = false;
           });
 
+          // Al tocar la tapa el video vuelve al principio y se reproduce con
+          // sonido, para que no se pierda el arranque que corrió en mudo.
           overlay.addEventListener('click', function () {
             player.muted = false;
+            player.currentTime = 0;
             player.play();
             ocultarTapa();
           });
