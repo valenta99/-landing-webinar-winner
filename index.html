@@ -422,9 +422,62 @@
     box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
     overflow: hidden;
   }
+  .lp-video-frame {
+    /* Ancla para la tapa de "activar sonido". */
+    position: relative;
+  }
   .lp-video-frame wistia-player {
     display: block;
     width: 100%;
+  }
+
+  /* Tapa de "activar sonido" sobre la VSL. Es un <button> real, no un div con
+     pointer-events, así funciona con teclado y con lectores de pantalla. */
+  .lp-vsl-unmute {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(10px, 2.2vw, 18px);
+    padding: 16px;
+    border: 0;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    color: var(--text-hi);
+    text-align: center;
+    /* Paleta de la landing: violeta oscuro sobre negro tinta, semitransparente. */
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--violet-deep) 72%, transparent) 0%,
+      color-mix(in srgb, var(--ink) 80%, transparent) 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    transition: opacity 220ms ease;
+  }
+  .lp-vsl-unmute[hidden] { display: none; }
+  .lp-vsl-unmute.is-leaving { opacity: 0; pointer-events: none; }
+  .lp-vsl-unmute svg {
+    width: clamp(38px, 7vw, 56px);
+    height: clamp(38px, 7vw, 56px);
+    color: var(--gold-light);
+    flex: 0 0 auto;
+  }
+  .lp-vsl-unmute span {
+    font-size: clamp(15px, 2.6vw, 24px);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    line-height: 1.25;
+    max-width: 16ch;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  }
+  .lp-vsl-unmute:hover svg,
+  .lp-vsl-unmute:focus-visible svg { color: var(--gold-dark); }
+  .lp-vsl-unmute:focus-visible { outline: 3px solid var(--gold-light); outline-offset: -6px; }
+  @media (prefers-reduced-motion: reduce) {
+    .lp-vsl-unmute { transition: none; }
   }
   /* Swatch borroso mientras el custom element todavía no está definido:
      evita el salto de layout reservando el alto del 16/9. */
@@ -1056,9 +1109,69 @@
 
       <!-- VIDEO VSL (3 MIN) — Wistia. Los dos scripts del player están en el
            <head>, una sola vez; acá va solo el custom element. -->
-      <div class="lp-video-frame">
-        <wistia-player media-id="sxset7ki5h" aspect="1.7777777777777777"></wistia-player>
+      <div class="lp-video-frame" id="vslFrame">
+        <wistia-player media-id="sxset7ki5h" aspect="1.7777777777777777"
+                       autoplay muted playsinline></wistia-player>
+
+        <!-- Tapa de "activar sonido". Arranca oculta y el JS la muestra recién
+             cuando el player está listo y confirmado en mudo, para que nunca
+             quede tapando un video que ya suena. -->
+        <button type="button" class="lp-vsl-unmute" id="vslUnmute" hidden
+                aria-label="Activar el sonido del video">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+          <span>HACÉ CLICK PARA ACTIVAR EL SONIDO</span>
+        </button>
       </div>
+
+      <script>
+        /* VSL clásica: arranca sola en mudo (ningún navegador permite autoplay
+           con sonido) y la tapa invita a activar el audio con un click.
+           Se controla con la API real del player de Wistia —el propio elemento
+           <wistia-player>, que expone muted/play() y el evento mute-change—,
+           no tapando clicks con CSS. */
+        (function () {
+          var player = document.querySelector('#vslFrame wistia-player');
+          var overlay = document.getElementById('vslUnmute');
+          if (!player || !overlay) return;
+
+          function ocultarTapa() {
+            if (overlay.hidden) return;
+            overlay.classList.add('is-leaving');
+            // Se oculta recién al terminar el fundido, para que no quede
+            // interceptando clicks sobre los controles de Wistia.
+            window.setTimeout(function () { overlay.hidden = true; }, 240);
+          }
+
+          // El player recién acepta órdenes cuando avisa que su API está lista.
+          player.addEventListener('api-ready', function () {
+            player.muted = true;
+            var arranque = player.play();
+            if (arranque && typeof arranque.catch === 'function') {
+              // Si el navegador bloquea hasta el autoplay mudo, no importa:
+              // el click en la tapa arranca la reproducción igual.
+              arranque.catch(function () {});
+            }
+            if (player.muted) overlay.hidden = false;
+          });
+
+          overlay.addEventListener('click', function () {
+            player.muted = false;
+            player.play();
+            ocultarTapa();
+          });
+
+          // Si el sonido se activa desde los controles del player, la tapa
+          // ya no tiene sentido.
+          player.addEventListener('mute-change', function () {
+            if (!player.muted) ocultarTapa();
+          });
+        })();
+      </script>
 
       <div class="lp-cta-wrap">
         <a href="#registro" class="lp-cta" data-cta="vsl">Quiero mi lugar gratis</a>
