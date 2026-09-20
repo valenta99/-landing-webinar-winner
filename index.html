@@ -1637,9 +1637,11 @@
 
       // Meta Pixel: Lead. content_name identifica desde qué formulario se
       // registró, para poder distinguirlos si vuelve a haber más de uno.
+      // ingresos viaja con el texto exacto de la opción elegida.
       if (typeof fbq === 'function') {
         fbq('track', 'Lead', {
-          content_name: form.getAttribute('data-form-id') || 'form_arriba'
+          content_name: form.getAttribute('data-form-id') || 'form_arriba',
+          ingresos: ingresos
         });
       }
 
