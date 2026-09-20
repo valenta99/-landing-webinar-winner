@@ -981,10 +981,41 @@
     .lp-optin.is-close { padding: 56px 0 64px; }
     .lp-module { padding: 26px 20px; }
     .lp-form-real { padding: 26px 20px; }
-    .lp-founder-block { flex-direction: column; align-items: center; text-align: center; }
-    /* En columna, flex-basis pasa a controlar el alto: lo fijamos en auto
-       para que la foto siga siendo un círculo exacto de 84px. */
-    .lp-founder-photo { flex: 0 0 auto; width: 84px; height: 84px; }
+    /* Bios en móvil: ficha compacta. Grid de 2 columnas donde la primera
+       fila es foto + etiqueta ("SOBRE AHILU") centradas entre sí, y el
+       párrafo ocupa la fila de abajo a todo el ancho, alineado a la
+       izquierda. El display:contents del wrapper de texto sube sus hijos
+       (.who y el <p>) a items del grid, así no hace falta tocar el HTML. */
+    .lp-founder-block {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      column-gap: 14px;
+      row-gap: 10px;
+      align-items: center;
+      text-align: left;
+      margin-bottom: 20px;
+    }
+    .lp-founder-text { display: contents; }
+    /* En grid, flex-basis ya no controla el alto: fijamos el círculo a mano. */
+    .lp-founder-photo {
+      grid-column: 1; grid-row: 1;
+      flex: 0 0 auto; width: 68px; height: 68px;
+    }
+    .lp-founder-block .who {
+      grid-column: 2; grid-row: 1;
+      align-self: center;
+      margin-bottom: 0;
+    }
+    .lp-founder-block p {
+      grid-column: 1 / -1; grid-row: 2;
+      margin-bottom: 0;
+    }
+    /* Bios y párrafo de cierre: a la izquierda y más aireado de leer. */
+    .lp-founders-content p {
+      text-align: left;
+      font-size: 16.5px;
+      line-height: 1.6;
+    }
     .lp-test-card { flex: 0 0 100%; height: 420px; padding: 22px 18px; }
     .lp-faq-q { padding: 16px 18px; font-size: 14.5px; }
     .lp-faq-a p { padding: 0 18px 18px; font-size: 14px; }
