@@ -676,25 +676,6 @@
      Comportamiento técnico: overflow-x scroll + snap, igual a la referencia.
      ========================================================================== */
   .lp-testimonials { padding: 72px 0; }
-
-  /* Capturas reales de alumnas: grilla tipo mosaico (columnas) para que las
-     capturas de distinta altura queden compactas. 1 columna en celular. */
-  .lp-test-shots {
-    columns: 1;
-    column-gap: 18px;
-    margin-bottom: 40px;
-  }
-  .lp-test-shot {
-    break-inside: avoid;
-    margin: 0 0 18px;
-    background: var(--bg-card);
-    border: 1px solid var(--violet-border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-  }
-  .lp-test-shot img { display: block; width: 100%; height: auto; }
-
   .lp-test-wrap { position: relative; }
   .lp-test-track {
     display: flex;
@@ -710,6 +691,7 @@
   .lp-test-track::-webkit-scrollbar { display: none; }
   .lp-test-card {
     flex: 0 0 280px;
+    align-self: flex-start;
     background: var(--bg-card);
     border: 1px solid var(--violet-border);
     border-radius: var(--radius-md);
@@ -719,6 +701,14 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
+  }
+  /* Captura de testimonio dentro de la tarjeta: ocupa el ancho disponible y
+     conserva su proporción. La tarjeta (fondo, borde, radio, padding) no cambia. */
+  .lp-test-card img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
   }
   .lp-test-quote {
     font-size: 15px;
@@ -838,14 +828,8 @@
     .lp-modules { gap: 26px; }
   }
 
-  @media (min-width: 640px) {
-    .lp-test-shots { columns: 2; }
-  }
-
   @media (min-width: 900px) {
     .lp-container, .lp-container-narrow { padding: 0 24px; }
-
-    .lp-test-shots { columns: 3; column-gap: 20px; }
 
     /* Testimonios en desktop: grilla a todo el ancho del contenedor, sin carrusel ni flechas.
        auto-fit reparte el ancho entre las tarjetas que haya (3, 4, 5...). */
@@ -1083,10 +1067,9 @@
 
   <!-- ======================================================================
        BLOQUE 8 — TESTIMONIOS (carrusel horizontal)
-       ⚠️ Sin testimonios reales confirmados todavía. Las tarjetas de abajo son
-       PLACEHOLDER — reemplazar por capturas / videos / resultados reales
-       apenas estén disponibles (o por capturas del propio proceso/facturación
-       de Ahilu y Cami, según se definió como alternativa temporal).
+       Capturas reales de alumnas (assets/testimonios/), una por slide.
+       Se mantiene el comportamiento del carrusel: scroll con snap + drag +
+       flechas en mobile, y grilla a todo el ancho desde 900px.
        ====================================================================== -->
 
   <section class="lp-testimonials">
@@ -1096,85 +1079,47 @@
       </div>
     </div>
 
-    <div class="lp-container">
-      <!-- CAPTURAS REALES DE TESTIMONIOS (carpeta assets/testimonios/) -->
-      <div class="lp-test-shots">
-        <figure class="lp-test-shot">
-          <img src="assets/testimonios/12e0bf77-874f-4ea8-b1c7-926820a0f253.webp" width="800" height="1008" loading="lazy" decoding="async" alt="Captura del mensaje de Nelsy, alumna: facturó más de 15 millones en 17 días, con 6.000.000 de ganancia limpia y un pico de 125 ventas en un solo día.">
-        </figure>
-        <figure class="lp-test-shot">
-          <img src="assets/testimonios/img-5481.webp" width="765" height="979" loading="lazy" decoding="async" alt="Captura del mensaje de Ro, alumna: llegó por primera vez a 40 ventas diarias, con 903,9 mil pesos en ventas totales, y cuenta que ya factura más de lo que ganaba en su antiguo trabajo.">
-        </figure>
-        <figure class="lp-test-shot">
-          <img src="assets/testimonios/img-5483.webp" width="781" height="999" loading="lazy" decoding="async" alt="Captura del mensaje de Nahue, alumno: 24,49 millones de pesos facturados en los últimos 30 días con más de 1.000 pedidos.">
-        </figure>
-        <figure class="lp-test-shot">
-          <img src="assets/testimonios/img-5485.webp" width="800" height="1112" loading="lazy" decoding="async" alt="Captura del mensaje de Mica, alumna: 3.012.506 pesos facturados en 7 días con 118 pedidos, duplicando su sueldo en una semana.">
-        </figure>
-        <figure class="lp-test-shot">
-          <img src="assets/testimonios/img-5486.webp" width="800" height="877" loading="lazy" decoding="async" alt="Captura del mensaje de Vale, alumna: 555 mil pesos en ventas totales del día con 26 pedidos en su tienda de libros digitales.">
-        </figure>
-        <figure class="lp-test-shot">
-          <img src="assets/testimonios/img-5489.webp" width="800" height="1064" loading="lazy" decoding="async" alt="Captura del mensaje de Fede, alumno: saldo de 15.509.104 pesos en su cuenta tras hacer récord de ventas en 15 días.">
-        </figure>
-        <figure class="lp-test-shot">
-          <img src="assets/testimonios/img-5490.webp" width="800" height="1368" loading="lazy" decoding="async" alt="Captura del mensaje de Nicole, alumna: 3.702.817 pesos en ventas totales del día con 182 pedidos, su día récord de ventas.">
-        </figure>
-        <figure class="lp-test-shot">
-          <img src="assets/testimonios/img-5491.webp" width="800" height="1494" loading="lazy" decoding="async" alt="Captura del chat de Tomás, alumno: vendió 21 ebooks en un solo día, casi 800 mil pesos, con las capturas de ventas de sus dos tiendas.">
-        </figure>
-      </div>
-    </div>
-
     <div class="lp-test-wrap">
       <div class="lp-test-track" id="testTrack">
 
-        <!-- TESTIMONIO PLACEHOLDER 1 -->
+        <!-- TESTIMONIO 1 -->
         <div class="lp-test-card">
-          <p class="lp-test-quote">"[Testimonio pendiente]"</p>
-          <div class="lp-test-meta">
-            <div class="lp-test-avatar"></div>
-            <div>
-              <div class="lp-test-name">[Nombre pendiente]</div>
-              <div class="lp-test-role">[Resultado pendiente]</div>
-            </div>
-          </div>
+          <img src="assets/testimonios/12e0bf77-874f-4ea8-b1c7-926820a0f253.webp" width="800" height="1008" loading="lazy" decoding="async" alt="Captura del mensaje de Nelsy, alumna: facturó más de 15 millones en 17 días, con 6.000.000 de ganancia limpia y un pico de 125 ventas en un solo día.">
         </div>
 
-        <!-- TESTIMONIO PLACEHOLDER 2 -->
+        <!-- TESTIMONIO 2 -->
         <div class="lp-test-card">
-          <p class="lp-test-quote">"[Testimonio pendiente]"</p>
-          <div class="lp-test-meta">
-            <div class="lp-test-avatar"></div>
-            <div>
-              <div class="lp-test-name">[Nombre pendiente]</div>
-              <div class="lp-test-role">[Resultado pendiente]</div>
-            </div>
-          </div>
+          <img src="assets/testimonios/img-5481.webp" width="765" height="979" loading="lazy" decoding="async" alt="Captura del mensaje de Ro, alumna: llegó por primera vez a 40 ventas diarias, con 903,9 mil pesos en ventas totales, y cuenta que ya factura más de lo que ganaba en su antiguo trabajo.">
         </div>
 
-        <!-- TESTIMONIO PLACEHOLDER 3 -->
+        <!-- TESTIMONIO 3 -->
         <div class="lp-test-card">
-          <p class="lp-test-quote">"[Testimonio pendiente]"</p>
-          <div class="lp-test-meta">
-            <div class="lp-test-avatar"></div>
-            <div>
-              <div class="lp-test-name">[Nombre pendiente]</div>
-              <div class="lp-test-role">[Resultado pendiente]</div>
-            </div>
-          </div>
+          <img src="assets/testimonios/img-5483.webp" width="781" height="999" loading="lazy" decoding="async" alt="Captura del mensaje de Nahue, alumno: 24,49 millones de pesos facturados en los últimos 30 días con más de 1.000 pedidos.">
         </div>
 
-        <!-- TESTIMONIO PLACEHOLDER 4 -->
+        <!-- TESTIMONIO 4 -->
         <div class="lp-test-card">
-          <p class="lp-test-quote">"[Testimonio pendiente]"</p>
-          <div class="lp-test-meta">
-            <div class="lp-test-avatar"></div>
-            <div>
-              <div class="lp-test-name">[Nombre pendiente]</div>
-              <div class="lp-test-role">[Resultado pendiente]</div>
-            </div>
-          </div>
+          <img src="assets/testimonios/img-5485.webp" width="800" height="1112" loading="lazy" decoding="async" alt="Captura del mensaje de Mica, alumna: 3.012.506 pesos facturados en 7 días con 118 pedidos, duplicando su sueldo en una semana.">
+        </div>
+
+        <!-- TESTIMONIO 5 -->
+        <div class="lp-test-card">
+          <img src="assets/testimonios/img-5486.webp" width="800" height="877" loading="lazy" decoding="async" alt="Captura del mensaje de Vale, alumna: 555 mil pesos en ventas totales del día con 26 pedidos en su tienda de libros digitales.">
+        </div>
+
+        <!-- TESTIMONIO 6 -->
+        <div class="lp-test-card">
+          <img src="assets/testimonios/img-5489.webp" width="800" height="1064" loading="lazy" decoding="async" alt="Captura del mensaje de Fede, alumno: saldo de 15.509.104 pesos en su cuenta tras hacer récord de ventas en 15 días.">
+        </div>
+
+        <!-- TESTIMONIO 7 -->
+        <div class="lp-test-card">
+          <img src="assets/testimonios/img-5490.webp" width="800" height="1368" loading="lazy" decoding="async" alt="Captura del mensaje de Nicole, alumna: 3.702.817 pesos en ventas totales del día con 182 pedidos, su día récord de ventas.">
+        </div>
+
+        <!-- TESTIMONIO 8 -->
+        <div class="lp-test-card">
+          <img src="assets/testimonios/img-5491.webp" width="800" height="1494" loading="lazy" decoding="async" alt="Captura del chat de Tomás, alumno: vendió 21 ebooks en un solo día, casi 800 mil pesos, con las capturas de ventas de sus dos tiendas.">
         </div>
 
       </div>
