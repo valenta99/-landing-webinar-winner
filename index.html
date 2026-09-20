@@ -1641,14 +1641,45 @@
         tracking: tracking
       };
 
-      // Meta Pixel: Lead. content_name identifica desde qué formulario se
-      // registró, para poder distinguirlos si vuelve a haber más de uno.
-      // ingresos viaja con el texto exacto de la opción elegida.
+      // ----------------------------------------------------------------
+      // Meta Pixel: Lead con doble disparo y deduplicación por eventID.
+      //
+      // El Lead se dispara acá Y de nuevo al cargar gracias.html, con el
+      // MISMO eventID. Meta deduplica por eventID, así que cuenta una sola
+      // vez. El doble disparo cubre los dos modos de falla:
+      //   - Acá puede perderse: fbq() encola las llamadas hasta que termina
+      //     de cargar fbevents.js, y si la navegación llega antes, el evento
+      //     muere en la cola sin enviarse.
+      //   - En gracias.html puede perderse si la persona cierra la pestaña
+      //     entre el envío y la carga de esa página.
+      // Con los dos, basta con que uno llegue.
+      //
+      // Los parámetros viajan por sessionStorage, no por query string: así
+      // el rango de ingresos no queda en la URL ni se filtra por el Referer
+      // hacia Wistia u otros terceros.
+      // ----------------------------------------------------------------
+      var leadEventId = 'lead-' + Date.now().toString(36) + '-' +
+        Math.random().toString(36).slice(2, 10);
+      var leadParams = {
+        content_name: form.getAttribute('data-form-id') || 'form_arriba',
+        ingresos: ingresos
+      };
+
+      // Token de un solo uso: gracias.html solo dispara el Lead si lo
+      // encuentra, y lo borra al consumirlo. Entrar directo a gracias.html,
+      // refrescar o volver con "atrás" no dispara ningún Lead falso.
+      try {
+        sessionStorage.setItem('mc_lead_pending', JSON.stringify({
+          eventID: leadEventId,
+          params: leadParams,
+          ts: Date.now()
+        }));
+      } catch (err) {
+        // Modo privado o storage bloqueado: seguimos igual, queda el disparo de acá.
+      }
+
       if (typeof fbq === 'function') {
-        fbq('track', 'Lead', {
-          content_name: form.getAttribute('data-form-id') || 'form_arriba',
-          ingresos: ingresos
-        });
+        fbq('track', 'Lead', leadParams, { eventID: leadEventId });
       }
 
       // Estado de carga breve en el botón

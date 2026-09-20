@@ -23,6 +23,44 @@
 <!-- FIN META PIXEL -->
 
 <!-- ======================================================================
+     META PIXEL — Lead (segundo disparo, deduplicado por eventID).
+     index.html ya dispara el Lead al enviarse el formulario y deja acá, en
+     sessionStorage, un token de un solo uso con el mismo eventID y los
+     mismos parámetros. Se vuelve a disparar desde esta página porque el
+     primer disparo puede perderse: fbq() encola las llamadas hasta que
+     carga fbevents.js, y si la navegación llega antes, el evento muere en
+     la cola. Acá la página está quieta, así que siempre hay tiempo.
+     Meta deduplica por eventID: aunque lleguen los dos, cuenta un solo Lead.
+     El token se consume (se borra) al usarlo, así entrar directo a esta URL,
+     refrescar o volver con "atrás" no genera Leads falsos.
+     ====================================================================== -->
+<script>
+  (function () {
+    var raw;
+    try {
+      raw = sessionStorage.getItem('mc_lead_pending');
+      // Se consume siempre, incluso si después no se puede usar: el token
+      // vale por un único registro y no debe sobrevivir a esta carga.
+      sessionStorage.removeItem('mc_lead_pending');
+    } catch (err) {
+      return; // Modo privado o storage bloqueado: ya disparó index.html.
+    }
+    if (!raw) return; // Llegó sin registrarse, o ya se disparó antes.
+
+    var lead;
+    try { lead = JSON.parse(raw); } catch (err) { return; }
+    if (!lead || !lead.eventID) return;
+
+    // Un token viejo (pestaña reabierta mucho después) no cuenta como registro.
+    if (!lead.ts || Date.now() - lead.ts > 30 * 60 * 1000) return;
+
+    if (typeof fbq === 'function') {
+      fbq('track', 'Lead', lead.params || {}, { eventID: lead.eventID });
+    }
+  })();
+</script>
+
+<!-- ======================================================================
      WISTIA — reproductor del video de esta página (media ye74ymb3np).
      Van acá, una sola vez: ambos son async, así que no bloquean el render,
      y estando en el <head> el custom element queda definido antes de que se
