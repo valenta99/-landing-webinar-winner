@@ -6,6 +6,8 @@
 //      (POST /opportunities/upsert);
 //   2) guarda el lead en Supabase (mc_leads) para el panel /admin, con el
 //      resultado de GHL. Se guarda SIEMPRE, aunque GHL falle.
+//   3) reporta el evento a la API de Conversiones de Meta (server-side),
+//      sin bloquear la respuesta al usuario si esto falla.
 // Sin dependencias externas: usa el runtime de Node de Vercel tal cual.
 //
 // Variables de entorno (Vercel → Settings → Environment Variables):
@@ -16,12 +18,18 @@
 //   GHL_PIPELINE_STAGE_ID  ID de la etapa inicial de ese pipeline
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY   Base del panel /admin
 //   DASH_KEY               Clave de acceso a /admin (la usan api/stats y api/leads)
+//   META_CAPI_TOKEN        Token de acceso de la API de Conversiones de Meta
+//   META_PIXEL_ID          ID del pixel/dataset de Meta (confirmar que el
+//                          nombre coincide con el cargado en Vercel — si se
+//                          cargó con otro nombre, ajustar esta constante)
 
+var crypto = require('crypto');
 var db = require('../lib/supabase');
 
 var GHL_API = 'https://services.leadconnectorhq.com';
 var CONTACT_SOURCE = 'Landing registro masterclass';
 var CONTACT_TAGS = ['masterclass-registro'];
+var GHL_CUSTOM_FIELD_INGRESOS_KEY = 'ingresos_mensuales_usd';
 
 // Sube el lead a GHL. Devuelve { contactId, opportunityId }; tira Error con el
 // detalle si algo falla (el llamador lo registra en ghl_status).
@@ -60,6 +68,17 @@ async function syncToGhl(lead) {
   if (nameParts.length > 1) contact.lastName = nameParts.slice(1).join(' ');
   if (lead.phone) contact.phone = lead.phone.replace(/[^\d+]/g, '');
 
+  // Campo personalizado: ingresos mensuales en USD.
+  // GHL API v2 acepta el custom field referenciado por "key" (el que se ve
+  // en la configuración del campo dentro de GHL). Si en tu subcuenta el
+  // campo pide "id" en vez de "key", cambiá esta línea por
+  // { id: 'EL_ID_DEL_CAMPO', field_value: lead.ingresosMensualesUsd }
+  if (lead.ingresosMensualesUsd) {
+    contact.customFields = [
+      { key: GHL_CUSTOM_FIELD_INGRESOS_KEY, field_value: lead.ingresosMensualesUsd }
+    ];
+  }
+
   // 1) Contacto
   var contactRes = await ghlPost('/contacts/upsert', contact);
   if (!contactRes.ok) {
@@ -94,6 +113,61 @@ async function syncToGhl(lead) {
   };
 }
 
+// SHA-256 en minúsculas y sin espacios, como pide Meta para el user_data
+// hasheado de la API de Conversiones.
+function sha256(value) {
+  return crypto.createHash('sha256').update(String(value).trim().toLowerCase()).digest('hex');
+}
+
+// Reporta el evento a la API de Conversiones de Meta (server-side).
+// No debe romper el flujo principal si falla: se llama envuelto en su
+// propio try/catch desde el handler.
+async function reportToMetaCapi(lead, req) {
+  var token = process.env.META_CAPI_TOKEN;
+  var pixelId = process.env.META_PIXEL_ID;
+
+  if (!token || !pixelId) {
+    throw new Error('faltan envs de Meta (META_CAPI_TOKEN, META_PIXEL_ID)');
+  }
+
+  var userData = {
+    em: [sha256(lead.email)]
+  };
+  if (lead.phone) {
+    // Meta espera el teléfono sin "+" ni caracteres no numéricos antes de hashear
+    userData.ph = [sha256(lead.phone.replace(/[^\d]/g, ''))];
+  }
+  if (req.headers['x-forwarded-for']) {
+    userData.client_ip_address = String(req.headers['x-forwarded-for']).split(',')[0].trim();
+  }
+  if (req.headers['user-agent']) {
+    userData.client_user_agent = req.headers['user-agent'];
+  }
+
+  var payload = {
+    data: [
+      {
+        event_name: 'Lead',
+        event_time: Math.floor(Date.now() / 1000),
+        action_source: 'website',
+        event_source_url: req.headers.referer || undefined,
+        user_data: userData
+      }
+    ]
+  };
+
+  var url = 'https://graph.facebook.com/v19.0/' + pixelId + '/events?access_token=' + encodeURIComponent(token);
+  var res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    throw new Error('meta capi ' + res.status + ' ' + (await res.text()).slice(0, 300));
+  }
+}
+
 // Solo valores string, acotados: el objeto viene de la URL y lo controla quien visita.
 function cleanTracking(t) {
   var out = {};
@@ -102,6 +176,14 @@ function cleanTracking(t) {
     if (typeof t[k] === 'string') out[String(k).slice(0, 60)] = t[k].slice(0, 300);
   });
   return out;
+}
+
+// El input del form manda cosas como "+3k", "1000-2000", etc. Guardamos el
+// string tal cual lo eligió la persona — no intentamos convertirlo a número
+// acá porque son rangos, no un monto exacto.
+function cleanIngresos(v) {
+  if (v === undefined || v === null) return '';
+  return String(v).trim().slice(0, 40);
 }
 
 module.exports = async function handler(req, res) {
@@ -130,7 +212,9 @@ module.exports = async function handler(req, res) {
   var lead = {
     name: String(body.nombre || '').trim().slice(0, 120),
     email: String(body.email).trim().toLowerCase().slice(0, 160),
-    phone: body.telefono ? String(body.telefono).trim().slice(0, 40) : ''
+    phone: body.telefono ? String(body.telefono).trim().slice(0, 40) : '',
+    // El formulario manda este campo como "ingresos" en el POST.
+    ingresosMensualesUsd: cleanIngresos(body.ingresos)
   };
 
   // 1) GHL
@@ -149,6 +233,7 @@ module.exports = async function handler(req, res) {
     name: lead.name || null,
     email: lead.email,
     phone: lead.phone || null,
+    ingresos_mensuales_usd: lead.ingresosMensualesUsd || null,
     vid: body.vid ? String(body.vid).slice(0, 64) : null,
     tracking: cleanTracking(body.tracking),
     page: req.headers.referer ? String(req.headers.referer).slice(0, 500) : null,
@@ -156,6 +241,13 @@ module.exports = async function handler(req, res) {
     ghl_opportunity_id: ghl.opportunityId,
     ghl_status: ghlStatus
   });
+
+  // 3) Meta Conversions API — nunca debe tirar abajo la respuesta al usuario
+  try {
+    await reportToMetaCapi(lead, req);
+  } catch (err) {
+    console.error('Meta CAPI:', err.message);
+  }
 
   // Solo es un error si el lead no quedó en ningún lado.
   if (ghlStatus !== 'ok' && !saved) {
