@@ -21,6 +21,16 @@
 <noscript><img height="1" width="1" style="display:none"
   src="https://www.facebook.com/tr?id=1336554037852872&ev=PageView&noscript=1" alt=""></noscript>
 <!-- FIN META PIXEL -->
+
+<!-- ======================================================================
+     WISTIA — reproductor del video de esta página (media ye74ymb3np).
+     Van acá, una sola vez: ambos son async, así que no bloquean el render,
+     y estando en el <head> el custom element queda definido antes de que se
+     pinte el video, que está arriba de todo.
+     ====================================================================== -->
+<script src="https://fast.wistia.com/player.js" async></script>
+<script src="https://fast.wistia.com/embed/ye74ymb3np.js" async type="module"></script>
+
 <title>¡Registro confirmado!</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -214,31 +224,28 @@
     max-width: 480px;
     margin: 0 auto 20px;
   }
+  /* Contenedor del reproductor de Wistia, igual que el de index.html.
+     overflow:hidden para que el video respete las esquinas redondeadas. */
   .gy-video-frame {
-    max-width: 560px;
+    max-width: 780px;
     margin: 0 auto;
-    aspect-ratio: 16 / 9;
     border-radius: var(--radius-lg);
     background: linear-gradient(180deg, color-mix(in srgb, var(--violet-deep) 30%, var(--ink) 70%) 0%, var(--ink) 100%);
-    border: 1px dashed var(--violet-border);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 10px;
-    color: var(--text-lo);
-    text-align: center;
-    padding: 20px;
+    overflow: hidden;
   }
-  .gy-video-frame .play-ico {
-    width: 52px; height: 52px; border-radius: 50%;
-    border: 2px solid var(--violet-border);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--text-hi); font-size: 20px;
+  .gy-video-frame wistia-player {
+    display: block;
+    width: 100%;
   }
-  .gy-video-frame .video-label { font-size: 13px; font-weight: 600; color: var(--text-mid); }
-  .gy-video-frame .video-sub { font-size: 12px; color: var(--text-lo); }
+  /* Swatch borroso mientras el custom element todavía no está definido:
+     evita el salto de layout reservando el alto del 16/9. */
+  wistia-player[media-id='ye74ymb3np']:not(:defined) {
+    background: center / contain no-repeat url('https://fast.wistia.com/embed/medias/ye74ymb3np/swatch');
+    display: block;
+    filter: blur(5px);
+    padding-top: 56.25%;
+  }
 
   .gy-actions { padding: 8px 0 48px; }
 
@@ -355,11 +362,10 @@
   <!-- VSL -->
   <section class="gy-vsl">
     <div class="gy-container">
-      <!-- VIDEO VSL (3 MIN) -->
+      <!-- VIDEO — Wistia. Los dos scripts del player están en el <head>,
+           una sola vez; acá va solo el custom element. -->
       <div class="gy-video-frame">
-        <div class="play-ico">▶</div>
-        <div class="video-label">Video VSL — pendiente de grabación</div>
-        <div class="video-sub">Acá va a ir el video de Ailu (guion aparte, no es texto de landing)</div>
+        <wistia-player media-id="ye74ymb3np" aspect="1.7777777777777777"></wistia-player>
       </div>
     </div>
   </section>
