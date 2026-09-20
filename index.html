@@ -603,75 +603,12 @@
     box-shadow: 0 14px 34px rgba(212, 162, 76, 0.18), 0 0 0 1px rgba(245, 197, 99, 0.25) !important;
   }
 
-  /* Formulario de registro + papelitos de regalos a los costados */
+  /* Formulario de registro, centrado (los papelitos de regalos se eliminaron) */
   .lp-registro-wrap {
     display: flex;
-    align-items: center;
     justify-content: center;
-    gap: 32px;
   }
   .lp-registro-wrap .lp-form-real { margin: 0; flex: 0 1 440px; }
-
-  .lp-postit {
-    flex: 0 0 200px;
-    position: relative;
-    text-align: left;
-    padding: 26px 20px 22px;
-    border-radius: 4px;
-    background: linear-gradient(160deg, var(--gold-light) 0%, var(--gold-dark) 100%);
-    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35);
-    color: var(--ink);
-    will-change: transform;
-  }
-  /* Cinta de papel pegando el papelito */
-  .lp-postit::before {
-    content: "";
-    position: absolute;
-    top: -12px; left: 50%;
-    width: 78px; height: 24px;
-    transform: translateX(-50%) rotate(-3deg);
-    background: rgba(255, 255, 255, 0.28);
-    border-left: 1px solid rgba(255, 255, 255, 0.35);
-    border-right: 1px solid rgba(255, 255, 255, 0.35);
-  }
-  .lp-postit .lp-postit-tag {
-    display: block;
-    font-family: var(--font-sans);
-    font-size: 12.5px;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    opacity: 0.75;
-  }
-  .lp-postit .lp-postit-text {
-    display: block;
-    font-family: var(--font-serif);
-    font-size: 17px;
-    line-height: 1.32;
-    font-weight: 600;
-  }
-  .lp-postit-left  { transform: rotate(-4deg); animation: postit-float-a 7s ease-in-out infinite; }
-  .lp-postit-right { transform: rotate(3.5deg); animation: postit-float-b 8s ease-in-out infinite; }
-
-  @keyframes postit-float-a {
-    0%, 100% { transform: rotate(-4deg) translateY(0); }
-    50%      { transform: rotate(-2.5deg) translateY(-9px); }
-  }
-  @keyframes postit-float-b {
-    0%, 100% { transform: rotate(3.5deg) translateY(0); }
-    50%      { transform: rotate(2deg) translateY(-8px); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .lp-postit-left, .lp-postit-right { animation: none !important; }
-  }
-
-  /* En pantallas angostas los papelitos nunca tapan el formulario: van debajo */
-  @media (max-width: 900px) {
-    .lp-registro-wrap { flex-direction: column; gap: 26px; }
-    .lp-registro-wrap .lp-form-real { order: 1; flex: 0 0 auto; width: 100%; max-width: 440px; }
-    .lp-postit { order: 2; flex: 0 0 auto; width: 100%; max-width: 320px; }
-  }
 
   /* ==========================================================================
      BLOQUE 4 — QUÉ SE VA A VER (módulos)
@@ -1184,7 +1121,7 @@
 
 
   <!-- ======================================================================
-       BLOQUE 2B — FORMULARIO REAL DE REGISTRO (único en la página) + regalos
+       BLOQUE 2B — FORMULARIO REAL DE REGISTRO (único en la página)
        ====================================================================== -->
 
   <section class="lp-optin is-alt" id="registro">
@@ -1193,11 +1130,6 @@
       <p class="lp-optin-sub">Martes 29 de Septiembre, 20:00 hs (Argentina). Gratis, en vivo, y con todo lo que necesitás para dar el siguiente paso.</p>
 
       <div class="lp-registro-wrap">
-
-        <aside class="lp-postit lp-postit-left">
-          <span class="lp-postit-tag">REGALO #2</span>
-          <span class="lp-postit-text">Mis 2 softwares de IA + todos mis prompts</span>
-        </aside>
 
         <form class="lp-form-real" id="registroForm" data-form-id="form_arriba" novalidate>
           <div class="lp-field">
@@ -1261,11 +1193,6 @@
           </div>
           <button type="submit" class="lp-cta lp-cta-submit" id="registroSubmitBtn">Quiero mi lugar gratis</button>
         </form>
-
-        <aside class="lp-postit lp-postit-right">
-          <span class="lp-postit-tag">REGALO #3</span>
-          <span class="lp-postit-text">Qué vender de acá a diciembre: top ventas de fin de año</span>
-        </aside>
 
       </div>
     </div>
