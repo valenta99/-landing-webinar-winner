@@ -1745,6 +1745,16 @@
     var submitBtn = document.getElementById('registroSubmitBtn');
     if (!form || !submitBtn) return;
 
+    // Rangos de ingresos que cuentan como lead CALIFICADO para Meta.
+    // Los strings deben coincidir EXACTO con los <option value> del select.
+    // Mismo criterio en api/register.js (QUALIFIED_INGRESOS): si se cambia acá, cambiarlo allá.
+    var QUALIFIED_INGRESOS = ['$1.000 a $3.000', 'Más de $3.000'];
+
+    function readCookie(name) {
+      var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return m ? decodeURIComponent(m[1]) : '';
+    }
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
 
@@ -1782,6 +1792,18 @@
       });
       // El teléfono se manda ya con el prefijo del país elegido.
       var telefonoCompleto = pais + ' ' + telefono;
+
+      // eventID compartido entre pixel (navegador) y API de Conversiones (servidor):
+      // es lo que le permite a Meta deduplicar. El calificado usa el mismo id + '-q'.
+      var leadEventId = 'lead-' + Date.now().toString(36) + '-' +
+        Math.random().toString(36).slice(2, 10);
+      var qualified = QUALIFIED_INGRESOS.indexOf(ingresos) !== -1;
+
+      // fbp/fbc suben el match rate de CAPI. Si no hay cookie _fbc pero la URL trae
+      // fbclid (el pixel todavía no alcanzó a crearla), se arma con el formato de Meta.
+      var fbc = readCookie('_fbc');
+      if (!fbc && tracking.fbclid) fbc = 'fb.1.' + Date.now() + '.' + tracking.fbclid;
+
       var payload = {
         nombre: nombre,
         email: email,
@@ -1789,7 +1811,10 @@
         pais: pais,
         ingresos: ingresos,
         vid: getVisitorId(),
-        tracking: tracking
+        tracking: tracking,
+        eventId: leadEventId,
+        fbp: readCookie('_fbp'),
+        fbc: fbc
       };
 
       // ----------------------------------------------------------------
@@ -1809,8 +1834,6 @@
       // el rango de ingresos no queda en la URL ni se filtra por el Referer
       // hacia Wistia u otros terceros.
       // ----------------------------------------------------------------
-      var leadEventId = 'lead-' + Date.now().toString(36) + '-' +
-        Math.random().toString(36).slice(2, 10);
       var leadParams = {
         content_name: form.getAttribute('data-form-id') || 'form_arriba',
         ingresos: ingresos
@@ -1823,6 +1846,7 @@
         sessionStorage.setItem('mc_lead_pending', JSON.stringify({
           eventID: leadEventId,
           params: leadParams,
+          qualified: qualified,
           ts: Date.now()
         }));
       } catch (err) {
@@ -1831,6 +1855,10 @@
 
       if (typeof fbq === 'function') {
         fbq('track', 'Lead', leadParams, { eventID: leadEventId });
+        // Solo los que pasan el umbral de ingresos: es el evento para optimizar campañas.
+        if (qualified) {
+          fbq('trackCustom', 'LeadCalificado', leadParams, { eventID: leadEventId + '-q' });
+        }
       }
 
       // Estado de carga breve en el botón

@@ -56,6 +56,9 @@
 
     if (typeof fbq === 'function') {
       fbq('track', 'Lead', lead.params || {}, { eventID: lead.eventID });
+      if (lead.qualified) {
+        fbq('trackCustom', 'LeadCalificado', lead.params || {}, { eventID: lead.eventID + '-q' });
+      }
     }
   })();
 </script>

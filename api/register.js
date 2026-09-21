@@ -31,6 +31,11 @@ var CONTACT_SOURCE = 'Landing registro masterclass';
 var CONTACT_TAGS = ['masterclass-registro'];
 var GHL_CUSTOM_FIELD_INGRESOS_KEY = 'ingresos_mensuales_usd';
 
+// Rangos de ingresos que cuentan como lead CALIFICADO para Meta (evento
+// LeadCalificado). Deben coincidir EXACTO con los <option value> del select de
+// index.html, que tiene la misma lista (QUALIFIED_INGRESOS): cambiar en ambos.
+var QUALIFIED_INGRESOS = ['$1.000 a $3.000', 'Más de $3.000'];
+
 // Sube el lead a GHL. Devuelve { contactId, opportunityId }; tira Error con el
 // detalle si algo falla (el llamador lo registra en ghl_status).
 async function syncToGhl(lead) {
@@ -144,17 +149,28 @@ async function reportToMetaCapi(lead, req) {
     userData.client_user_agent = req.headers['user-agent'];
   }
 
-  var payload = {
-    data: [
-      {
-        event_name: 'Lead',
-        event_time: Math.floor(Date.now() / 1000),
-        action_source: 'website',
-        event_source_url: req.headers.referer || undefined,
-        user_data: userData
-      }
-    ]
+  if (lead.fbp) userData.fbp = lead.fbp;
+  if (lead.fbc) userData.fbc = lead.fbc;
+
+  // Mismos event_id que dispara el pixel en el navegador: así Meta deduplica en
+  // vez de contar doble. El calificado usa el mismo id + '-q' (ver index.html).
+  var base = {
+    event_time: Math.floor(Date.now() / 1000),
+    action_source: 'website',
+    event_source_url: req.headers.referer || undefined,
+    user_data: userData,
+    custom_data: { ingresos: lead.ingresosMensualesUsd || undefined }
   };
+
+  var events = [Object.assign({ event_name: 'Lead', event_id: lead.eventId }, base)];
+  if (QUALIFIED_INGRESOS.indexOf(lead.ingresosMensualesUsd) !== -1) {
+    events.push(Object.assign({
+      event_name: 'LeadCalificado',
+      event_id: lead.eventId ? lead.eventId + '-q' : undefined
+    }, base));
+  }
+
+  var payload = { data: events };
 
   var url = 'https://graph.facebook.com/v19.0/' + pixelId + '/events?access_token=' + encodeURIComponent(token);
   var res = await fetch(url, {
@@ -214,7 +230,11 @@ module.exports = async function handler(req, res) {
     email: String(body.email).trim().toLowerCase().slice(0, 160),
     phone: body.telefono ? String(body.telefono).trim().slice(0, 40) : '',
     // El formulario manda este campo como "ingresos" en el POST.
-    ingresosMensualesUsd: cleanIngresos(body.ingresos)
+    ingresosMensualesUsd: cleanIngresos(body.ingresos),
+    // Datos para la API de Conversiones (dedup + match rate), los manda el navegador
+    eventId: /^[\w-]{1,80}$/.test(String(body.eventId || '')) ? String(body.eventId) : '',
+    fbp: /^fb\.\d\.\d+\.\d+$/.test(String(body.fbp || '')) ? String(body.fbp) : '',
+    fbc: /^fb\.\d\.\d+\.[\w-]{1,300}$/.test(String(body.fbc || '')) ? String(body.fbc) : ''
   };
 
   // 1) GHL
