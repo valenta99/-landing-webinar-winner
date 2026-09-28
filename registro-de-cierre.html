@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Registro de cierre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #141414;
+    --violet-deep: #540336;
+    --violet: #7E3660;
+    --bg-card: color-mix(in srgb, var(--violet-deep) 16%, var(--ink) 84%);
+    --border: rgba(126, 54, 96, 0.45);
+    --border-soft: rgba(126, 54, 96, 0.22);
+    --text-hi: #fff;
+    --text-mid: rgba(255, 255, 255, 0.78);
+    --text-lo: rgba(255, 255, 255, 0.55);
+    --gold: #F5C563;
+    --gold-dark: #D4A24C;
+    --error: #ff8a8a;
+    --ok: #7be0a0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    background-image: radial-gradient(ellipse at top, rgba(84, 3, 54, 0.45), transparent 60%);
+    color: var(--text-hi);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 30px; margin: 0 0 4px; }
+  .sub { color: var(--text-lo); margin: 0 0 28px; font-size: 15px; }
+  form, .done, .gate {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 24px;
+  }
+  fieldset { border: 0; padding: 0; margin: 0 0 24px; }
+  legend {
+    padding: 0; margin-bottom: 12px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--gold);
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .full { grid-column: 1 / -1; }
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text-mid); margin-bottom: 6px; }
+  label .req { color: var(--gold); }
+  input, select {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-hi);
+    font: inherit; font-size: 16px;
+    padding: 12px 14px;
+    color-scheme: dark;
+  }
+  input:focus, select:focus { outline: 2px solid var(--gold-dark); outline-offset: 1px; }
+  input[readonly] { color: var(--text-mid); border-style: dashed; }
+  .cuota { border: 1px solid var(--border-soft); border-radius: 16px; padding: 14px; margin-top: 14px; }
+  .cuota h3 { margin: 0 0 10px; font-size: 13px; color: var(--text-mid); font-weight: 600; }
+  .hidden { display: none !important; }
+  button {
+    width: 100%;
+    border: 0; border-radius: 999px;
+    background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+    color: #1a1204; font: inherit; font-weight: 700; font-size: 16px;
+    padding: 15px 20px; cursor: pointer;
+  }
+  button:disabled { opacity: 0.55; cursor: progress; }
+  button.ghost { background: transparent; color: var(--gold); border: 1px solid var(--border); margin-top: 16px; }
+  .msg { min-height: 22px; margin: 0 0 12px; font-size: 14px; }
+  .msg.err { color: var(--error); }
+  .done { text-align: center; padding: 40px 24px; }
+  .done h2 { font-family: "Fraunces", Georgia, serif; margin: 0 0 8px; color: var(--ok); }
+  .done p { color: var(--text-mid); margin: 0; }
+  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } main { padding-top: 24px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Registro de cierre</h1>
+
+  <form id="gate" class="gate" novalidate>
+    <p class="sub" style="margin-bottom:16px">Ingresá la contraseña para cargar un cierre.</p>
+    <label for="pw">Contraseña</label>
+    <input id="pw" type="password" autocomplete="current-password" autofocus>
+    <p id="gate-msg" class="msg err" role="alert" style="margin-top:12px"></p>
+    <button id="gate-btn" type="submit">Entrar</button>
+  </form>
+
+  <p id="sub" class="sub hidden">Cargá los datos del cliente que acaba de cerrar.</p>
+
+  <form id="f" class="hidden" novalidate>
+    <fieldset>
+      <legend>Cliente</legend>
+      <div class="grid">
+        <div><label for="nombre">Nombre <span class="req">*</span></label><input id="nombre" name="nombre" autocomplete="off" required></div>
+        <div><label for="apellido">Apellido <span class="req">*</span></label><input id="apellido" name="apellido" autocomplete="off" required></div>
+        <div><label for="email">Email <span class="req">*</span></label><input id="email" name="email" type="email" autocomplete="off" required></div>
+        <div><label for="celular">Celular <span class="req">*</span></label><input id="celular" name="celular" type="tel" placeholder="+54 9 11 ..." autocomplete="off" required></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Programa</legend>
+      <div class="grid">
+        <div><label for="fecha_ingreso">Fecha de ingreso <span class="req">*</span></label><input id="fecha_ingreso" name="fecha_ingreso" type="date" required></div>
+        <div><label for="meses">Meses de asesoría <span class="req">*</span></label><select id="meses" name="meses" required></select></div>
+        <div><label for="programa">Programa <span class="req">*</span></label><select id="programa" name="programa" required></select></div>
+        <div><label for="closer">Closer <span class="req">*</span></label><select id="closer" name="closer" required></select></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Pago</legend>
+      <div class="grid">
+        <div><label for="modalidad">Modalidad de pago <span class="req">*</span></label><select id="modalidad" name="modalidad" required></select></div>
+        <div><label id="lbl-entrada" for="monto_entrada">Monto de entrada <span class="req">*</span></label><input id="monto_entrada" name="monto_entrada" type="number" min="0" step="any" inputmode="decimal" required></div>
+      </div>
+
+      <div id="sec-cuotas" class="hidden">
+        <div class="grid" style="margin-top:14px">
+          <div><label for="numero_cuotas">Número de cuotas <span class="req">*</span></label><select id="numero_cuotas" name="numero_cuotas"></select></div>
+          <div><label for="restante_calc">Monto restante</label><input id="restante_calc" readonly tabindex="-1" placeholder="Suma de las cuotas"></div>
+        </div>
+        <div id="cuotas-list"></div>
+      </div>
+
+      <div id="sec-sena" class="hidden">
+        <div class="grid" style="margin-top:14px">
+          <div><label for="monto_restante">Monto restante <span class="req">*</span></label><input id="monto_restante" name="monto_restante" type="number" min="0" step="any" inputmode="decimal"></div>
+          <div><label for="fecha_limite_saldo">Fecha límite del saldo <span class="req">*</span></label><input id="fecha_limite_saldo" name="fecha_limite_saldo" type="date"></div>
+        </div>
+      </div>
+    </fieldset>
+
+    <p id="msg" class="msg" role="alert"></p>
+    <button id="send" type="submit">Registrar cierre</button>
+  </form>
+
+  <div id="done" class="done hidden">
+    <h2>Cierre registrado</h2>
+    <p>Ya quedó cargado en la planilla.</p>
+    <button id="again" class="ghost" type="button">Registrar otro cierre</button>
+  </div>
+</main>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var api = '/api/cierre';
+  var cfg = null;
+  var pass = '';
+
+  function store(v) { try { if (v == null) sessionStorage.removeItem('cierre_pw'); else sessionStorage.setItem('cierre_pw', v); } catch (e) {} }
+  function stored() { try { return sessionStorage.getItem('cierre_pw') || ''; } catch (e) { return ''; } }
+  function headers(json) {
+    var h = { 'x-cierre-key': pass };
+    if (json) h['Content-Type'] = 'application/json';
+    return h;
+  }
+
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function fill(sel, items, placeholder) {
+    var html = placeholder ? '<option value="">' + placeholder + '</option>' : '';
+    items.forEach(function (it) { html += '<option value="' + it.v + '">' + it.t + '</option>'; });
+    sel.innerHTML = html;
+  }
+  function show(el, on) { el.classList.toggle('hidden', !on); }
+  function msg(text, isErr) { var m = $('msg'); m.textContent = text || ''; m.className = 'msg' + (isErr ? ' err' : ''); }
+
+  function renderCuotas() {
+    var n = parseInt($('numero_cuotas').value, 10) || 0;
+    var list = $('cuotas-list');
+    // Conserva lo tipeado si sólo cambia la cantidad.
+    var prev = {};
+    list.querySelectorAll('input').forEach(function (i) { prev[i.name] = i.value; });
+    var html = '';
+    for (var i = 1; i <= n; i++) {
+      html += '<div class="cuota"><h3>Cuota ' + i + '</h3><div class="grid">' +
+        '<div><label>Vencimiento <span class="req">*</span></label><input name="c' + i + '_vencimiento" type="date"></div>' +
+        '<div><label>Monto <span class="req">*</span></label><input name="c' + i + '_monto" type="number" min="0" step="any" inputmode="decimal"></div>' +
+        '</div></div>';
+    }
+    list.innerHTML = html;
+    list.querySelectorAll('input').forEach(function (inp) {
+      if (prev[inp.name] != null) inp.value = prev[inp.name];
+      if (/_monto$/.test(inp.name)) inp.addEventListener('input', sumCuotas);
+    });
+    sumCuotas();
+  }
+  function sumCuotas() {
+    var total = 0, any = false;
+    $('cuotas-list').querySelectorAll('input[name$="_monto"]').forEach(function (i) {
+      var v = parseFloat(i.value);
+      if (isFinite(v)) { total += v; any = true; }
+    });
+    $('restante_calc').value = any ? total : '';
+  }
+  function onModalidad() {
+    var m = $('modalidad').value;
+    show($('sec-cuotas'), m === 'Cuotas');
+    show($('sec-sena'), m === 'Seña');
+    $('lbl-entrada').firstChild.textContent = m === 'Seña' ? 'Monto de la seña ' : 'Monto de entrada ';
+    if (m === 'Cuotas' && !$('numero_cuotas').value) { $('numero_cuotas').value = '1'; }
+    renderCuotas();
+  }
+  function resetForm() {
+    $('f').reset();
+    $('fecha_ingreso').value = today();
+    onModalidad();
+    msg('');
+  }
+
+  function build(c) {
+    cfg = c;
+    var meses = [];
+    for (var i = 1; i <= c.mesesMax; i++) meses.push({ v: i, t: i + (i === 1 ? ' mes' : ' meses') });
+    var cuotas = [];
+    for (var j = 1; j <= c.cuotasMax; j++) cuotas.push({ v: j, t: String(j) });
+    var same = function (a) { return a.map(function (x) { return { v: x, t: x }; }); };
+    fill($('meses'), meses, 'Elegí…');
+    fill($('programa'), same(c.programas), 'Elegí…');
+    fill($('closer'), same(c.closers), 'Elegí…');
+    fill($('modalidad'), same(c.modalidades), 'Elegí…');
+    fill($('numero_cuotas'), cuotas);
+    resetForm();
+    show($('gate'), false); show($('sub'), true); show($('f'), true);
+  }
+
+  // Valida la contraseña contra el servidor; si está bien trae las opciones y muestra el form.
+  function unlock(pw, silent) {
+    pass = pw;
+    var gmsg = $('gate-msg'), gbtn = $('gate-btn');
+    gbtn.disabled = true; gmsg.textContent = '';
+    return fetch(api, { headers: headers(false) }).then(function (r) {
+      if (r.status === 401) throw new Error(silent ? '' : 'Contraseña incorrecta.');
+      if (!r.ok) throw new Error('No se pudo cargar el formulario. Recargá la página.');
+      return r.json();
+    }).then(function (c) { store(pw); build(c); })
+      .catch(function (e) { store(null); pass = ''; gmsg.textContent = e.message; })
+      .then(function () { gbtn.disabled = false; });
+  }
+
+  $('gate').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var v = $('pw').value;
+    if (v) unlock(v, false);
+  });
+  if (stored()) unlock(stored(), true);
+
+  $('modalidad').addEventListener('change', onModalidad);
+  $('numero_cuotas').addEventListener('change', renderCuotas);
+  $('again').addEventListener('click', function () { show($('done'), false); show($('f'), true); resetForm(); window.scrollTo(0, 0); });
+
+  $('f').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (!cfg) return;
+    // Sólo se valida lo visible: los campos de otra modalidad quedan ocultos y vacíos.
+    var bad = null;
+    $('f').querySelectorAll('input, select').forEach(function (el) {
+      if (bad || el.readOnly || el.closest('.hidden')) return;
+      var required = el.required || (el.closest('#sec-cuotas, #sec-sena') && el.type !== 'submit');
+      if (required && !el.value) bad = el;
+      else if (!bad && el.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value)) bad = el;
+    });
+    if (bad) { bad.focus(); return msg('Revisá los campos marcados con * (falta o está mal: ' + (bad.labels && bad.labels[0] ? bad.labels[0].textContent.replace('*', '').trim() : bad.name) + ').', true); }
+
+    var data = {};
+    $('f').querySelectorAll('input, select').forEach(function (el) {
+      if (el.name && !el.closest('.hidden')) data[el.name] = el.value;
+    });
+    var btn = $('send');
+    btn.disabled = true; btn.textContent = 'Guardando…'; msg('');
+    fetch(api, { method: 'POST', headers: headers(true), body: JSON.stringify(data) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (res.j.error === 'bad_key') { store(null); location.reload(); return; }
+        if (!res.ok) throw new Error(res.j.message || 'No se pudo guardar. Reintentá.');
+        show($('f'), false); show($('done'), true); window.scrollTo(0, 0);
+      })
+      .catch(function (e) { msg(e.message, true); })
+      .then(function () { btn.disabled = false; btn.textContent = 'Registrar cierre'; });
+  });
+})();
+</script>
+</body>
+</html>
