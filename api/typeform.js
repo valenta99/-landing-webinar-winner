@@ -124,7 +124,8 @@ function parseResponse(fr) {
 // devuelve '' y la oportunidad se crea igual, sin host en el nombre.
 async function getCalendlyHost(eventUuid) {
   var token = process.env.CALENDLY_TOKEN;
-  if (!token || !eventUuid) return '';
+  if (!token) return { host: '', note: 'sin CALENDLY_TOKEN en Vercel' };
+  if (!eventUuid) return { host: '', note: 'no vino el link de Calendly en la respuesta' };
   try {
     var r = await fetch('https://api.calendly.com/scheduled_events/' + eventUuid, {
       headers: { Authorization: 'Bearer ' + token }
@@ -132,10 +133,11 @@ async function getCalendlyHost(eventUuid) {
     if (!r.ok) throw new Error(r.status + ' ' + (await r.text()).slice(0, 200));
     var j = await r.json();
     var members = (j.resource && j.resource.event_memberships) || [];
-    return members.map(function (mb) { return mb.user_name || mb.user_email; }).filter(Boolean).join(', ');
+    var host = members.map(function (mb) { return mb.user_name || mb.user_email; }).filter(Boolean).join(', ');
+    return { host: host, note: host ? 'ok' : 'el evento no trae host' };
   } catch (err) {
     console.error('Calendly host:', err.message);
-    return '';
+    return { host: '', note: 'error: ' + err.message.slice(0, 200) };
   }
 }
 
@@ -181,7 +183,8 @@ async function syncToGhl(app, endingKey) {
   var contactId = contactData && contactData.contact && contactData.contact.id;
   if (!contactId) throw new Error('GHL no devolvió el id del contacto');
 
-  var host = endingKey === 'agendo' ? await getCalendlyHost(app.calendlyEventUuid) : '';
+  var hostInfo = endingKey === 'agendo' ? await getCalendlyHost(app.calendlyEventUuid) : { host: '', note: 'no aplica' };
+  var host = hostInfo.host;
 
   // Upsert: si el contacto ya tiene una oportunidad en este pipeline la reutiliza y
   // la mueve a la columna del ending, en vez de duplicarla.
@@ -204,7 +207,15 @@ async function syncToGhl(app, endingKey) {
   var oppData = await oppRes.json().catch(function () { return null; });
   return {
     contactId: contactId,
-    opportunityId: (oppData && oppData.opportunity && oppData.opportunity.id) || null
+    opportunityId: (oppData && oppData.opportunity && oppData.opportunity.id) || null,
+    // Diagnóstico: se ve en Typeform → Webhooks → View deliveries (la respuesta solo la lee Typeform).
+    debug: {
+      calendlyHost: hostInfo.note,
+      customFieldsEnviados: app.customFields.length,
+      customFieldsGuardados: (oppData && oppData.opportunity && oppData.opportunity.customFields || []).length,
+      oportunidadNueva: oppData && oppData.new,
+      nombre: oppData && oppData.opportunity && oppData.opportunity.name
+    }
   };
 }
 
@@ -239,7 +250,7 @@ module.exports = async function handler(req, res) {
   // Si GHL falla devolvemos 500 para que Typeform reintente el webhook.
   try {
     var ghl = await syncToGhl(app, endingKey);
-    return res.status(200).json({ ok: true, ending: endingKey, contactId: ghl.contactId, opportunityId: ghl.opportunityId });
+    return res.status(200).json({ ok: true, ending: endingKey, contactId: ghl.contactId, opportunityId: ghl.opportunityId, debug: ghl.debug });
   } catch (err) {
     console.error('GHL typeform (' + endingKey + '):', err.message);
     return res.status(500).json({ error: 'ghl_failed', ending: endingKey });
