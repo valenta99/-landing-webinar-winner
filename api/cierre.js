@@ -102,6 +102,7 @@ function buildRow(b) {
   for (var i = 1; i <= config.cuotasMax; i++) {
     row['c' + i + '_vencimiento'] = '';
     row['c' + i + '_monto'] = '';
+    row['c' + i + '_estado'] = '';
   }
 
   if (b.modalidad === 'Cuotas') {
@@ -115,6 +116,7 @@ function buildRow(b) {
       if (monto === null) return { error: 'Falta el monto de la cuota ' + c };
       row['c' + c + '_vencimiento'] = fmtDate(venc);
       row['c' + c + '_monto'] = monto;
+      row['c' + c + '_estado'] = 'Pendiente';
       total += monto;
     }
     row.numero_cuotas = n;
