@@ -96,7 +96,7 @@ function detectEnding(fr) {
 }
 
 function parseResponse(fr) {
-  var out = { name: '', email: '', phone: '', prioridad: 0, customFields: [], calendlyEventUuid: '', hidden: fr.hidden || {} };
+  var out = { name: '', email: '', phone: '', prioridad: 0, customFields: [], calendlyEventUuid: '', calendlyInviteeUuid: '', hidden: fr.hidden || {} };
   (fr.answers || []).forEach(function (a) {
     var f = a.field || {};
     if (a.type === 'email' || f.type === 'email') out.email = String(a.email || '').trim().toLowerCase();
@@ -106,9 +106,13 @@ function parseResponse(fr) {
 
     // La respuesta del bloque Calendly trae el link del evento; no dependemos de la forma
     // exacta del payload, buscamos el uuid en cualquier parte de la respuesta.
-    if (!out.calendlyEventUuid && (a.type === 'calendly' || f.type === 'calendly')) {
-      var m = /scheduled_events\/([0-9a-f-]{36})/i.exec(JSON.stringify(a));
-      if (m) out.calendlyEventUuid = m[1];
+    // Con links de equipo (calendly.com/d/…/invitees/<uuid>) solo viene el uuid del invitado.
+    if (f.type === 'calendly' || a.type === 'calendly') {
+      var raw = JSON.stringify(a);
+      var mEv = /scheduled_events\/([0-9a-f-]{36})/i.exec(raw);
+      var mInv = /invitees\/([0-9a-f-]{36})/i.exec(raw);
+      if (mEv) out.calendlyEventUuid = mEv[1];
+      if (mInv) out.calendlyInviteeUuid = mInv[1];
     }
 
     // Además del if/else de arriba: el plazo y el presupuesto también van a su campo.
@@ -122,17 +126,41 @@ function parseResponse(fr) {
 // Nombre de quien atiende el evento de Calendly (round robin: el host lo asigna Calendly
 // al agendar). Necesita CALENDLY_TOKEN (Personal Access Token). Si falta o Calendly falla,
 // devuelve '' y la oportunidad se crea igual, sin host en el nombre.
-async function getCalendlyHost(eventUuid) {
+async function getCalendlyHost(app) {
   var token = process.env.CALENDLY_TOKEN;
   if (!token) return { host: '', note: 'sin CALENDLY_TOKEN en Vercel' };
-  if (!eventUuid) return { host: '', note: 'no vino el link de Calendly en la respuesta' };
-  try {
-    var r = await fetch('https://api.calendly.com/scheduled_events/' + eventUuid, {
+  if (!app.calendlyEventUuid && !app.calendlyInviteeUuid) return { host: '', note: 'no vino el link de Calendly en la respuesta' };
+
+  async function cget(path) {
+    var r = await fetch(path.indexOf('http') === 0 ? path : 'https://api.calendly.com' + path, {
       headers: { Authorization: 'Bearer ' + token }
     });
-    if (!r.ok) throw new Error(r.status + ' ' + (await r.text()).slice(0, 200));
-    var j = await r.json();
-    var members = (j.resource && j.resource.event_memberships) || [];
+    if (!r.ok) throw new Error(path.split('?')[0] + ' ' + r.status + ' ' + (await r.text()).slice(0, 200));
+    return r.json();
+  }
+
+  try {
+    var picked = null;
+    if (app.calendlyEventUuid) {
+      picked = (await cget('/scheduled_events/' + app.calendlyEventUuid)).resource;
+    } else {
+      // Link de equipo: solo tenemos el uuid del invitado. Se listan los eventos activos de
+      // ese email en la organización y se confirma cuál es por el uuid del invitado.
+      var org = (await cget('/users/me')).resource.current_organization;
+      var events = (await cget('/scheduled_events?organization=' + encodeURIComponent(org) +
+        '&invitee_email=' + encodeURIComponent(app.email) + '&status=active&count=10')).collection || [];
+      if (events.length === 1) {
+        picked = events[0];
+      } else {
+        for (var i = 0; i < events.length && i < 5 && !picked; i++) {
+          var inv = (await cget(events[i].uri + '/invitees?count=100')).collection || [];
+          var hit = inv.some(function (x) { return String(x.uri).indexOf(app.calendlyInviteeUuid) !== -1; });
+          if (hit) picked = events[i];
+        }
+      }
+      if (!picked) return { host: '', note: 'no encontré el evento en Calendly (' + events.length + ' eventos activos con ese email)' };
+    }
+    var members = picked.event_memberships || [];
     var host = members.map(function (mb) { return mb.user_name || mb.user_email; }).filter(Boolean).join(', ');
     return { host: host, note: host ? 'ok' : 'el evento no trae host' };
   } catch (err) {
@@ -183,7 +211,7 @@ async function syncToGhl(app, endingKey) {
   var contactId = contactData && contactData.contact && contactData.contact.id;
   if (!contactId) throw new Error('GHL no devolvió el id del contacto');
 
-  var hostInfo = endingKey === 'agendo' ? await getCalendlyHost(app.calendlyEventUuid) : { host: '', note: 'no aplica' };
+  var hostInfo = endingKey === 'agendo' ? await getCalendlyHost(app) : { host: '', note: 'no aplica' };
   var host = hostInfo.host;
 
   // Upsert: si el contacto ya tiene una oportunidad en este pipeline la reutiliza y
