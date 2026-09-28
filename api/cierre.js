@@ -59,6 +59,12 @@ function addMonths(p, n) {
   return { y: y, m: m, d: Math.min(p.d, last) };
 }
 
+// Google Sheets interpreta como fórmula lo que empieza con = + - @ (un celular "+54 9 ..." da
+// #ERROR!). Con un apóstrofe adelante lo guarda como texto y no muestra el apóstrofe.
+function cell(v, force) {
+  return force || /^[=+\-@]/.test(v) ? "'" + v : v;
+}
+
 function money(v) {
   var n = Number(v);
   return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
@@ -84,10 +90,10 @@ function buildRow(b) {
 
   var row = {
     fecha_registro: new Date().toLocaleString('en-GB', { timeZone: TZ, hour12: false }),
-    nombre: str(b.nombre),
-    apellido: str(b.apellido),
-    email: email,
-    celular: str(b.celular, 40),
+    nombre: cell(str(b.nombre)),
+    apellido: cell(str(b.apellido)),
+    email: cell(email),
+    celular: cell(str(b.celular, 40), true),
     fecha_ingreso: fmtDate(ingreso),
     meses_asesoria: meses + (meses === 1 ? ' mes' : ' meses'),
     programa: b.programa,
