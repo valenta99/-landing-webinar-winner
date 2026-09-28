@@ -49,6 +49,21 @@ var BUDGET_CHOICE_NONE = 'HnB7etwtR3go';   // No tengo dinero para invertir
 var BUDGET_CHOICE_LOW = 'e7RBiuvOtM62';    // $500 - $1000 usd
 var NAME_FIELD_ID = 'kZinowNMYcNa';
 
+// Pregunta del Typeform (field id) → custom field de la oportunidad en GHL (id).
+// Cada uno guarda el texto de la opción elegida. Los ids salen de
+// GET /locations/{locationId}/customFields?model=opportunity.
+var ANSWER_FIELDS = {
+  tHd0z1wBiLnG: '8T2W57lbcxH9NPNHtura', // situacion_actual
+  '1ZQIrgTqJAhM': 'isyFueTyyECCi6R99XR1', // ocupacion
+  Hb5eJ3cwe49k: 'udfA9zSmvrrfCqOrTyzD', // facturacion_mensual
+  PHbJrjYPxLeZ: 'IqlDZdIka7peKR8n4OaO', // mayor_problema
+  YH8vsqPYVqKy: 'TkN4gxzfsmgvsy8c8RVs', // intentos_previos
+  iJ2n18bqcv1L: 'WpVrMcL08Hc1q6IXXny5', // decision_inversion
+  Pju5YRDvEFVj: 'Ppxe1l0lrW5s9AwWPU9m', // edad
+  mkZq5cLW3D0r: '7aWvdB2lYiKpvyzTjWr0', // presupuesto
+  e3hxbcp5Hnzb: 'hq48A1mD6UWt3twB4g48' // plazo_presupuesto
+};
+
 // Prioridad de los que no tienen presupuesto: la pregunta "¿en cuántos días podés
 // conseguirlo?" (solo la ven ellos). Se guarda como valor de la oportunidad, así el
 // tablero de GHL los ordena con "Lead value" de mayor a menor. Cuanto antes, más alto.
@@ -79,13 +94,18 @@ function detectEnding(fr) {
 }
 
 function parseResponse(fr) {
-  var out = { name: '', email: '', phone: '', prioridad: 0, hidden: fr.hidden || {} };
+  var out = { name: '', email: '', phone: '', prioridad: 0, customFields: [], hidden: fr.hidden || {} };
   (fr.answers || []).forEach(function (a) {
     var f = a.field || {};
     if (a.type === 'email' || f.type === 'email') out.email = String(a.email || '').trim().toLowerCase();
     else if (a.type === 'phone_number' || f.type === 'phone_number') out.phone = String(a.phone_number || '').trim();
     else if (f.id === NAME_FIELD_ID) out.name = String(a.text || '').trim();
     else if (f.id === PLAZO_FIELD_ID && a.choice) out.prioridad = PLAZO_PRIORIDAD[a.choice.id] || 0;
+
+    // Además del if/else de arriba: el plazo y el presupuesto también van a su campo.
+    var ghlFieldId = ANSWER_FIELDS[f.id];
+    var text = a.choice && (a.choice.label || a.choice.other);
+    if (ghlFieldId && text) out.customFields.push({ id: ghlFieldId, field_value: String(text).trim() });
   });
   return out;
 }
@@ -144,6 +164,7 @@ async function syncToGhl(app, endingKey) {
     // Solo el ending sin presupuesto lleva prioridad; en los otros se pisa con 0 para
     // no arrastrar el puntaje si la persona ya tenía una oportunidad de antes.
     monetaryValue: endingKey === 'sin_presupuesto' ? app.prioridad : 0,
+    customFields: app.customFields,
     source: CONTACT_SOURCE
   });
   if (!oppRes.ok) {
