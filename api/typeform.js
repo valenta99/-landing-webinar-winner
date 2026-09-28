@@ -49,6 +49,17 @@ var BUDGET_CHOICE_NONE = 'HnB7etwtR3go';   // No tengo dinero para invertir
 var BUDGET_CHOICE_LOW = 'e7RBiuvOtM62';    // $500 - $1000 usd
 var NAME_FIELD_ID = 'kZinowNMYcNa';
 
+// Prioridad de los que no tienen presupuesto: la pregunta "¿en cuántos días podés
+// conseguirlo?" (solo la ven ellos). Se guarda como valor de la oportunidad, así el
+// tablero de GHL los ordena con "Lead value" de mayor a menor. Cuanto antes, más alto.
+var PLAZO_FIELD_ID = 'e3hxbcp5Hnzb';
+var PLAZO_PRIORIDAD = {
+  raYG7rloSlob: 4, // 1-3 Dias
+  '2gOdBlY3uBJB': 3, // 3-7 Dias
+  FqdDnWrlcdHv: 2, // 7-14 Dias
+  AAooHhbAsPvG: 1 // +14 Dias
+};
+
 // Devuelve la clave de ENDINGS a la que llegó la persona, o null si no terminó el form.
 function detectEnding(fr) {
   var e = fr.ending;
@@ -68,12 +79,13 @@ function detectEnding(fr) {
 }
 
 function parseResponse(fr) {
-  var out = { name: '', email: '', phone: '', hidden: fr.hidden || {} };
+  var out = { name: '', email: '', phone: '', prioridad: 0, hidden: fr.hidden || {} };
   (fr.answers || []).forEach(function (a) {
     var f = a.field || {};
     if (a.type === 'email' || f.type === 'email') out.email = String(a.email || '').trim().toLowerCase();
     else if (a.type === 'phone_number' || f.type === 'phone_number') out.phone = String(a.phone_number || '').trim();
     else if (f.id === NAME_FIELD_ID) out.name = String(a.text || '').trim();
+    else if (f.id === PLAZO_FIELD_ID && a.choice) out.prioridad = PLAZO_PRIORIDAD[a.choice.id] || 0;
   });
   return out;
 }
@@ -129,6 +141,9 @@ async function syncToGhl(app, endingKey) {
     contactId: contactId,
     name: (nameParts.join(' ') || app.email) + ' — Admisión',
     status: 'open',
+    // Solo el ending sin presupuesto lleva prioridad; en los otros se pisa con 0 para
+    // no arrastrar el puntaje si la persona ya tenía una oportunidad de antes.
+    monetaryValue: endingKey === 'sin_presupuesto' ? app.prioridad : 0,
     source: CONTACT_SOURCE
   });
   if (!oppRes.ok) {
