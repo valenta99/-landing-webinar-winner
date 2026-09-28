@@ -15,6 +15,8 @@
 //   TYPEFORM_WEBHOOK_KEY          Clave que va en ?key= de la URL del webhook (obligatoria)
 //   GHL_API_TOKEN                 Token de la Private Integration de la subcuenta
 //                                 (scopes: contacts.write, opportunities.write)
+//   CALENDLY_TOKEN                Personal Access Token de Calendly (opcional): sin él, el
+//                                 nombre de la oportunidad no lleva el host de la agenda
 //   GHL_AGENDA_LOCATION_ID, GHL_AGENDA_PIPELINE_ID, GHL_AGENDA_STAGE_AGENDO,
 //   GHL_AGENDA_STAGE_WHATSAPP, GHL_AGENDA_STAGE_SIN_PRESUPUESTO   (opcionales: pisan
 //                                 los IDs por defecto de abajo)
@@ -94,7 +96,7 @@ function detectEnding(fr) {
 }
 
 function parseResponse(fr) {
-  var out = { name: '', email: '', phone: '', prioridad: 0, customFields: [], hidden: fr.hidden || {} };
+  var out = { name: '', email: '', phone: '', prioridad: 0, customFields: [], calendlyEventUuid: '', hidden: fr.hidden || {} };
   (fr.answers || []).forEach(function (a) {
     var f = a.field || {};
     if (a.type === 'email' || f.type === 'email') out.email = String(a.email || '').trim().toLowerCase();
@@ -102,12 +104,39 @@ function parseResponse(fr) {
     else if (f.id === NAME_FIELD_ID) out.name = String(a.text || '').trim();
     else if (f.id === PLAZO_FIELD_ID && a.choice) out.prioridad = PLAZO_PRIORIDAD[a.choice.id] || 0;
 
+    // La respuesta del bloque Calendly trae el link del evento; no dependemos de la forma
+    // exacta del payload, buscamos el uuid en cualquier parte de la respuesta.
+    if (!out.calendlyEventUuid && (a.type === 'calendly' || f.type === 'calendly')) {
+      var m = /scheduled_events\/([0-9a-f-]{36})/i.exec(JSON.stringify(a));
+      if (m) out.calendlyEventUuid = m[1];
+    }
+
     // Además del if/else de arriba: el plazo y el presupuesto también van a su campo.
     var ghlFieldId = ANSWER_FIELDS[f.id];
     var text = a.choice && (a.choice.label || a.choice.other);
     if (ghlFieldId && text) out.customFields.push({ id: ghlFieldId, field_value: String(text).trim() });
   });
   return out;
+}
+
+// Nombre de quien atiende el evento de Calendly (round robin: el host lo asigna Calendly
+// al agendar). Necesita CALENDLY_TOKEN (Personal Access Token). Si falta o Calendly falla,
+// devuelve '' y la oportunidad se crea igual, sin host en el nombre.
+async function getCalendlyHost(eventUuid) {
+  var token = process.env.CALENDLY_TOKEN;
+  if (!token || !eventUuid) return '';
+  try {
+    var r = await fetch('https://api.calendly.com/scheduled_events/' + eventUuid, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!r.ok) throw new Error(r.status + ' ' + (await r.text()).slice(0, 200));
+    var j = await r.json();
+    var members = (j.resource && j.resource.event_memberships) || [];
+    return members.map(function (mb) { return mb.user_name || mb.user_email; }).filter(Boolean).join(', ');
+  } catch (err) {
+    console.error('Calendly host:', err.message);
+    return '';
+  }
 }
 
 async function syncToGhl(app, endingKey) {
@@ -152,6 +181,8 @@ async function syncToGhl(app, endingKey) {
   var contactId = contactData && contactData.contact && contactData.contact.id;
   if (!contactId) throw new Error('GHL no devolvió el id del contacto');
 
+  var host = endingKey === 'agendo' ? await getCalendlyHost(app.calendlyEventUuid) : '';
+
   // Upsert: si el contacto ya tiene una oportunidad en este pipeline la reutiliza y
   // la mueve a la columna del ending, en vez de duplicarla.
   var oppRes = await ghlPost('/opportunities/upsert', {
@@ -159,7 +190,7 @@ async function syncToGhl(app, endingKey) {
     pipelineId: pipelineId,
     pipelineStageId: stageId,
     contactId: contactId,
-    name: (nameParts.join(' ') || app.email) + ' — Admisión',
+    name: (nameParts.join(' ') || app.email) + ' — Admisión' + (host ? ' — ' + host : ''),
     status: 'open',
     // Solo el ending sin presupuesto lleva prioridad; en los otros se pisa con 0 para
     // no arrastrar el puntaje si la persona ya tenía una oportunidad de antes.
