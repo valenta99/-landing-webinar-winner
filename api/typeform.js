@@ -14,7 +14,8 @@
 // Variables de entorno (Vercel → Settings → Environment Variables):
 //   TYPEFORM_WEBHOOK_KEY          Clave que va en ?key= de la URL del webhook (obligatoria)
 //   GHL_API_TOKEN                 Token de la Private Integration de la subcuenta
-//                                 (scopes: contacts.write, opportunities.write)
+//                                 (scopes: contacts.write, opportunities.write,
+//                                 calendars/events.write, calendars.readonly)
 //   CALENDLY_TOKEN                Personal Access Token de Calendly (opcional): sin él, el
 //                                 nombre de la oportunidad no lleva el host de la agenda
 //   GHL_AGENDA_LOCATION_ID, GHL_AGENDA_PIPELINE_ID, GHL_AGENDA_STAGE_AGENDO,
@@ -28,6 +29,8 @@ var CONTACT_SOURCE = 'Typeform agenda webinar';
 // secretos: van como default y las envs GHL_AGENDA_* los pisan si hace falta.
 var DEFAULT_LOCATION_ID = 'ZuV0ZXFQ6mCl6kpMUtos';
 var DEFAULT_PIPELINE_ID = '99t8lQjZ9xdQFqc6wHNf';
+// Calendario "Sesión de admisión (Calendly)": solo contenedor de citas del ending agendó.
+var DEFAULT_CALENDAR_ID = 'pNLTdb7VGfqXKrURgCIq';
 
 var ENDINGS = {
   agendo: {
@@ -162,7 +165,7 @@ async function getCalendlyHost(app) {
     }
     var members = picked.event_memberships || [];
     var host = members.map(function (mb) { return mb.user_name || mb.user_email; }).filter(Boolean).join(', ');
-    return { host: host, note: host ? 'ok' : 'el evento no trae host' };
+    return { host: host, note: host ? 'ok' : 'el evento no trae host', start: picked.start_time || '', end: picked.end_time || '' };
   } catch (err) {
     console.error('Calendly host:', err.message);
     return { host: '', note: 'error: ' + err.message.slice(0, 200) };
@@ -214,6 +217,18 @@ async function syncToGhl(app, endingKey) {
   var hostInfo = endingKey === 'agendo' ? await getCalendlyHost(app) : { host: '', note: 'no aplica' };
   var host = hostInfo.host;
 
+  // Fecha y hora de la llamada (hora de Argentina) para el nombre de la oportunidad.
+  var whenLabel = '';
+  if (hostInfo.start) {
+    var d = new Date(hostInfo.start);
+    var p = {};
+    new Intl.DateTimeFormat('es-AR', {
+      timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
+    whenLabel = p.day + '/' + p.month + ' ' + p.hour + ':' + p.minute;
+  }
+
   // Upsert: si el contacto ya tiene una oportunidad en este pipeline la reutiliza y
   // la mueve a la columna del ending, en vez de duplicarla.
   var oppRes = await ghlPost('/opportunities/upsert', {
@@ -221,7 +236,7 @@ async function syncToGhl(app, endingKey) {
     pipelineId: pipelineId,
     pipelineStageId: stageId,
     contactId: contactId,
-    name: (nameParts.join(' ') || app.email) + ' — Admisión' + (host ? ' — ' + host : ''),
+    name: (nameParts.join(' ') || app.email) + ' — Admisión' + (host ? ' — ' + host : '') + (whenLabel ? ' — ' + whenLabel : ''),
     status: 'open',
     // Solo el ending sin presupuesto lleva prioridad; en los otros se pisa con 0 para
     // no arrastrar el puntaje si la persona ya tenía una oportunidad de antes.
@@ -233,12 +248,42 @@ async function syncToGhl(app, endingKey) {
     throw new Error('oportunidad ' + oppRes.status + ' ' + (await oppRes.text()).slice(0, 300));
   }
   var oppData = await oppRes.json().catch(function () { return null; });
+
+  // Cita en el calendario de GHL con el horario del evento de Calendly. No corta el flujo
+  // si falla (la oportunidad ya está creada); el resultado queda en debug.
+  var citaNote = 'no aplica';
+  if (endingKey === 'agendo') {
+    if (!hostInfo.start || !hostInfo.end) {
+      citaNote = 'sin horario de Calendly';
+    } else {
+      try {
+        var calRes = await ghlPost('/calendars/events/appointments', {
+          calendarId: process.env.GHL_AGENDA_CALENDAR_ID || DEFAULT_CALENDAR_ID,
+          locationId: locationId,
+          contactId: contactId,
+          startTime: hostInfo.start,
+          endTime: hostInfo.end,
+          title: 'Sesión de admisión — ' + (nameParts.join(' ') || app.email) + (host ? ' — ' + host : ''),
+          appointmentStatus: 'confirmed',
+          ignoreFreeSlotValidation: true,
+          toNotify: false
+        });
+        citaNote = calRes.ok ? 'ok' : 'error ' + calRes.status + ' ' + (await calRes.text()).slice(0, 200);
+        if (!calRes.ok) console.error('GHL cita:', citaNote);
+      } catch (err) {
+        citaNote = 'error: ' + err.message.slice(0, 200);
+        console.error('GHL cita:', err.message);
+      }
+    }
+  }
+
   return {
     contactId: contactId,
     opportunityId: (oppData && oppData.opportunity && oppData.opportunity.id) || null,
     // Diagnóstico: se ve en Typeform → Webhooks → View deliveries (la respuesta solo la lee Typeform).
     debug: {
       calendlyHost: hostInfo.note,
+      citaCalendar: citaNote,
       customFieldsEnviados: app.customFields.length,
       customFieldsGuardados: (oppData && oppData.opportunity && oppData.opportunity.customFields || []).length,
       oportunidadNueva: oppData && oppData.new,
