@@ -31,6 +31,8 @@ var DEFAULT_LOCATION_ID = 'ZuV0ZXFQ6mCl6kpMUtos';
 var DEFAULT_PIPELINE_ID = '99t8lQjZ9xdQFqc6wHNf';
 // Calendario "Sesión de admisión (Calendly)": solo contenedor de citas del ending agendó.
 var DEFAULT_CALENDAR_ID = 'pNLTdb7VGfqXKrURgCIq';
+// GHL exige un usuario en la cita: el team member del calendario contenedor.
+var DEFAULT_CALENDAR_USER_ID = 'j2aAYpJ5iGpSpRoXHWsB';
 
 var ENDINGS = {
   agendo: {
@@ -259,6 +261,7 @@ async function syncToGhl(app, endingKey) {
       try {
         var calRes = await ghlPost('/calendars/events/appointments', {
           calendarId: process.env.GHL_AGENDA_CALENDAR_ID || DEFAULT_CALENDAR_ID,
+          assignedUserId: process.env.GHL_AGENDA_CALENDAR_USER_ID || DEFAULT_CALENDAR_USER_ID,
           locationId: locationId,
           contactId: contactId,
           startTime: hostInfo.start,
