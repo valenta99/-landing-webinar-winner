@@ -6,6 +6,7 @@
 // Configurar en Typeform → Connect → Webhooks con la URL:
 //   https://clase.ahilenesteve.com/api/typeform?key=<TYPEFORM_WEBHOOK_KEY>
 //
+// Forms: ver FORMS (agenda nG2ETYi3 y post webinar u19ta3Lb).
 // Endings del form (ver "logic" del form en la API de Typeform):
 //   agendo           FQfnMJyNRYA1  Calendly: "Ya reservaste tu Sesión 1-1" (presupuesto $1.000+)
 //   whatsapp         o2kCLDVn13Ii  "Ya recibimos tu aplicación", sigue por WhatsApp (presupuesto $500 - $1000)
@@ -82,8 +83,35 @@ var PLAZO_PRIORIDAD = {
   AAooHhbAsPvG: 1 // +14 Dias
 };
 
+// Forms que atiende el webhook, por form_id. "agenda" es el original; "postwebinar"
+// (Replay Webinar) es un clon con los mismos 3 endings (mismos ref) pero otros ids de
+// pregunta. Si un form tiene stageName, TODOS sus endings caen en esa columna del pipeline
+// (se busca por nombre con la API de GHL) y el ending queda como tag del contacto.
+var FORMS = {
+  nG2ETYi3: {
+    key: 'agenda', source: CONTACT_SOURCE, nameName: 'Admisión',
+    fields: { name: NAME_FIELD_ID, budget: BUDGET_FIELD_ID, plazo: PLAZO_FIELD_ID },
+    answerFields: ANSWER_FIELDS, plazoPrioridad: PLAZO_PRIORIDAD
+  },
+  u19ta3Lb: {
+    key: 'postwebinar', source: 'Typeform post webinar', nameName: 'Post Webinar',
+    stageName: 'Typeform Post Webinar',
+    fields: { name: 'qukEkGPznK4d', budget: 'QbZAcPANvMii', plazo: 'Y5d7eD3aQ0Yd' },
+    // mismas 9 preguntas, mismo orden → mismos custom fields de GHL
+    answerFields: {
+      AL5cYtwNv2EX: '8T2W57lbcxH9NPNHtura', '58JfIZmLCh3y': 'isyFueTyyECCi6R99XR1',
+      Iz8zd0fI1oru: 'udfA9zSmvrrfCqOrTyzD', U3ybjwbQ0YpH: 'IqlDZdIka7peKR8n4OaO',
+      Bsyg37KtkZ5w: 'TkN4gxzfsmgvsy8c8RVs', lWwRkepfxgMP: 'WpVrMcL08Hc1q6IXXny5',
+      AdARJWFCnr6j: 'Ppxe1l0lrW5s9AwWPU9m', QbZAcPANvMii: '7aWvdB2lYiKpvyzTjWr0',
+      Y5d7eD3aQ0Yd: 'hq48A1mD6UWt3twB4g48'
+    },
+    budgetNone: '3obIuiYCPbU2', budgetLow: 'emwSTdYy2uQj',
+    plazoPrioridad: { '7ZmXpdAHAOC1': 4, US5ud39A0J3o: 3, jI1otBJSX0Us: 2, uw60XWuQjwsB: 1 }
+  }
+};
+
 // Devuelve la clave de ENDINGS a la que llegó la persona, o null si no terminó el form.
-function detectEnding(fr) {
+function detectEnding(fr, form) {
   var e = fr.ending;
   if (e && (e.id || e.ref)) {
     var keys = Object.keys(ENDINGS);
@@ -93,21 +121,21 @@ function detectEnding(fr) {
     return null; // ending que no está mapeado (ej. el de Typeform por defecto)
   }
   // Sin "ending" en el payload: se deduce de la respuesta de presupuesto.
-  var budget = (fr.answers || []).filter(function (a) { return a.field && a.field.id === BUDGET_FIELD_ID; })[0];
+  var budget = (fr.answers || []).filter(function (a) { return a.field && a.field.id === form.fields.budget; })[0];
   if (!budget || !budget.choice) return null;
-  if (budget.choice.id === BUDGET_CHOICE_NONE) return 'sin_presupuesto';
-  if (budget.choice.id === BUDGET_CHOICE_LOW) return 'whatsapp';
+  if (budget.choice.id === (form.budgetNone || BUDGET_CHOICE_NONE)) return 'sin_presupuesto';
+  if (budget.choice.id === (form.budgetLow || BUDGET_CHOICE_LOW)) return 'whatsapp';
   return 'agendo';
 }
 
-function parseResponse(fr) {
+function parseResponse(fr, form) {
   var out = { name: '', email: '', phone: '', prioridad: 0, customFields: [], calendlyEventUuid: '', calendlyInviteeUuid: '', hidden: fr.hidden || {} };
   (fr.answers || []).forEach(function (a) {
     var f = a.field || {};
     if (a.type === 'email' || f.type === 'email') out.email = String(a.email || '').trim().toLowerCase();
     else if (a.type === 'phone_number' || f.type === 'phone_number') out.phone = String(a.phone_number || '').trim();
-    else if (f.id === NAME_FIELD_ID) out.name = String(a.text || '').trim();
-    else if (f.id === PLAZO_FIELD_ID && a.choice) out.prioridad = PLAZO_PRIORIDAD[a.choice.id] || 0;
+    else if (f.id === form.fields.name) out.name = String(a.text || '').trim();
+    else if (f.id === form.fields.plazo && a.choice) out.prioridad = form.plazoPrioridad[a.choice.id] || 0;
 
     // La respuesta del bloque Calendly trae el link del evento; no dependemos de la forma
     // exacta del payload, buscamos el uuid en cualquier parte de la respuesta.
@@ -121,7 +149,7 @@ function parseResponse(fr) {
     }
 
     // Además del if/else de arriba: el plazo y el presupuesto también van a su campo.
-    var ghlFieldId = ANSWER_FIELDS[f.id];
+    var ghlFieldId = form.answerFields[f.id];
     var text = a.choice && (a.choice.label || a.choice.other);
     if (ghlFieldId && text) out.customFields.push({ id: ghlFieldId, field_value: String(text).trim() });
   });
@@ -174,15 +202,27 @@ async function getCalendlyHost(app) {
   }
 }
 
-async function syncToGhl(app, endingKey) {
+// Id de la columna por nombre dentro del pipeline (GET /opportunities/pipelines).
+async function findStageByName(token, locationId, pipelineId, name) {
+  var r = await fetch(GHL_API + '/opportunities/pipelines?locationId=' + locationId, {
+    headers: { Authorization: 'Bearer ' + token, Version: '2021-07-28', Accept: 'application/json' }
+  });
+  if (!r.ok) throw new Error('pipelines ' + r.status + ' ' + (await r.text()).slice(0, 200));
+  var pls = (await r.json()).pipelines || [];
+  var pl = pls.filter(function (p) { return p.id === pipelineId; })[0];
+  var st = pl && (pl.stages || []).filter(function (x) { return String(x.name).trim().toLowerCase() === name.toLowerCase(); })[0];
+  if (!st) throw new Error('no existe la columna "' + name + '" en el pipeline');
+  return st.id;
+}
+
+async function syncToGhl(app, endingKey, form) {
   var token = process.env.GHL_API_TOKEN;
   var locationId = process.env.GHL_AGENDA_LOCATION_ID || DEFAULT_LOCATION_ID;
   var pipelineId = process.env.GHL_AGENDA_PIPELINE_ID || DEFAULT_PIPELINE_ID;
-  var stageId = process.env[ENDINGS[endingKey].stageEnv] || ENDINGS[endingKey].defaultStage;
-
-  if (!token || !locationId || !pipelineId || !stageId) {
-    throw new Error('falta la env GHL_API_TOKEN');
-  }
+  if (!token) throw new Error('falta la env GHL_API_TOKEN');
+  var stageId = form.stageName
+    ? await findStageByName(token, locationId, pipelineId, form.stageName)
+    : (process.env[ENDINGS[endingKey].stageEnv] || ENDINGS[endingKey].defaultStage);
 
   function ghlPost(path, payload) {
     return fetch(GHL_API + path, {
@@ -201,8 +241,8 @@ async function syncToGhl(app, endingKey) {
   var contact = {
     locationId: locationId,
     email: app.email,
-    source: CONTACT_SOURCE,
-    tags: ['typeform-agenda', 'agenda-' + endingKey.replace(/_/g, '-')]
+    source: form.source,
+    tags: ['typeform-' + form.key, form.key + '-' + endingKey.replace(/_/g, '-')]
   };
   if (nameParts.length) contact.firstName = nameParts[0];
   if (nameParts.length > 1) contact.lastName = nameParts.slice(1).join(' ');
@@ -238,13 +278,13 @@ async function syncToGhl(app, endingKey) {
     pipelineId: pipelineId,
     pipelineStageId: stageId,
     contactId: contactId,
-    name: (nameParts.join(' ') || app.email) + ' — Admisión' + (host ? ' — ' + host : '') + (whenLabel ? ' — ' + whenLabel : ''),
+    name: (nameParts.join(' ') || app.email) + ' — ' + form.nameName + (host ? ' — ' + host : '') + (whenLabel ? ' — ' + whenLabel : ''),
     status: 'open',
     // Solo el ending sin presupuesto lleva prioridad; en los otros se pisa con 0 para
     // no arrastrar el puntaje si la persona ya tenía una oportunidad de antes.
     monetaryValue: endingKey === 'sin_presupuesto' ? app.prioridad : 0,
     customFields: app.customFields,
-    source: CONTACT_SOURCE
+    source: form.source
   });
   if (!oppRes.ok) {
     throw new Error('oportunidad ' + oppRes.status + ' ' + (await oppRes.text()).slice(0, 300));
@@ -317,15 +357,18 @@ module.exports = async function handler(req, res) {
   var fr = body.form_response;
   if (!fr) return res.status(400).json({ error: 'invalid_payload' });
 
-  var app = parseResponse(fr);
+  var form = FORMS[fr.form_id];
+  if (!form) return res.status(200).json({ ok: true, ignored: 'form_desconocido' });
+
+  var app = parseResponse(fr, form);
   if (!app.email) return res.status(200).json({ ok: true, ignored: 'sin_email' });
 
-  var endingKey = detectEnding(fr);
+  var endingKey = detectEnding(fr, form);
   if (!endingKey) return res.status(200).json({ ok: true, ignored: 'sin_ending' });
 
   // Si GHL falla devolvemos 500 para que Typeform reintente el webhook.
   try {
-    var ghl = await syncToGhl(app, endingKey);
+    var ghl = await syncToGhl(app, endingKey, form);
     return res.status(200).json({ ok: true, ending: endingKey, contactId: ghl.contactId, opportunityId: ghl.opportunityId, debug: ghl.debug });
   } catch (err) {
     console.error('GHL typeform (' + endingKey + '):', err.message);
